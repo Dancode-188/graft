@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 
@@ -213,16 +213,232 @@ function CommitDetailsPanel({
   );
 }
 
+// Search Modal Component
+function SearchModal({
+  isOpen,
+  onClose,
+  commits,
+  onSelect,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  commits: Commit[];
+  onSelect: (commit: Commit) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<Commit[]>([]);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setQuery("");
+      setResults([]);
+    } else {
+      // Focus input when modal opens
+      setTimeout(() => inputRef.current?.focus(), 0);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (query.trim() === "") {
+      setResults([]);
+      return;
+    }
+
+    const q = query.toLowerCase();
+    const filtered = commits.filter((commit) => {
+      return (
+        commit.message.toLowerCase().includes(q) ||
+        commit.author_name.toLowerCase().includes(q) ||
+        commit.author_email.toLowerCase().includes(q) ||
+        commit.hash.toLowerCase().includes(q) ||
+        commit.short_hash.toLowerCase().includes(q)
+      );
+    });
+
+    setResults(filtered.slice(0, 20)); // Limit to first 20 results
+  }, [query, commits]);
+
+  const handleSelect = (commit: Commit) => {
+    onSelect(commit);
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl w-full max-w-2xl max-h-96 flex flex-col">
+        {/* Search Input */}
+        <div className="p-4 border-b border-zinc-800">
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder="Search commits by message, author, or hash... (Press Escape to close)"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                onClose();
+              } else if (e.key === "Enter" && results.length > 0) {
+                handleSelect(results[0]);
+              }
+            }}
+            className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-graft-500"
+          />
+        </div>
+
+        {/* Results */}
+        <div className="flex-1 overflow-auto">
+          {query.trim() === "" ? (
+            <div className="p-8 text-center text-zinc-500 text-sm">
+              Start typing to search commits
+            </div>
+          ) : results.length === 0 ? (
+            <div className="p-8 text-center text-zinc-500 text-sm">
+              No commits found matching "{query}"
+            </div>
+          ) : (
+            <div className="divide-y divide-zinc-800">
+              {results.map((commit) => {
+                const message = commit.message.split('\n')[0];
+                return (
+                  <button
+                    key={commit.hash}
+                    onClick={() => handleSelect(commit)}
+                    className="w-full px-4 py-3 text-left hover:bg-zinc-800 transition-colors focus:outline-none focus:bg-zinc-800"
+                  >
+                    <div className="text-sm font-medium text-zinc-100 truncate">
+                      {message}
+                    </div>
+                    <div className="text-xs text-zinc-400 flex items-center gap-2 mt-1">
+                      <span>{commit.short_hash}</span>
+                      <span>•</span>
+                      <span>{commit.author_name}</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Virtual Scroll Component for efficient rendering of large lists
+function VirtualCommitList({
+  commits,
+  selectedCommit,
+  onSelectCommit,
+  itemHeight = 104, // Approximate height of each commit item
+}: {
+  commits: Commit[];
+  selectedCommit: Commit | null;
+  onSelectCommit: (commit: Commit) => void;
+  itemHeight?: number;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 20 });
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const scrollTop = container.scrollTop;
+      const containerHeight = container.clientHeight;
+
+      const start = Math.floor(scrollTop / itemHeight);
+      const end = Math.ceil((scrollTop + containerHeight) / itemHeight);
+
+      setVisibleRange({
+        start: Math.max(0, start - 5), // Buffer of 5 items above
+        end: Math.min(commits.length, end + 5), // Buffer of 5 items below
+      });
+    };
+
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [commits.length, itemHeight]);
+
+  // Calculate offsets for invisible items
+  const offsetY = visibleRange.start * itemHeight;
+  const visibleCommits = commits.slice(visibleRange.start, visibleRange.end);
+
+  return (
+    <div
+      ref={containerRef}
+      className="flex-1 overflow-auto"
+      style={{ height: "100%" }}
+    >
+      {/* Invisible spacer for items above visible range */}
+      <div style={{ height: `${offsetY}px` }} />
+
+      {/* Visible items */}
+      <div className="space-y-2 px-6 py-4">
+        {visibleCommits.map((commit) => {
+          const timeAgo = getTimeAgo(new Date(commit.timestamp * 1000));
+          const commitMessage = commit.message.split('\n')[0];
+          const isSelected = selectedCommit?.hash === commit.hash;
+
+          return (
+            <div
+              key={commit.hash}
+              onClick={() => onSelectCommit(commit)}
+              className={`bg-zinc-900 border rounded-lg p-4 transition-all duration-200 cursor-pointer ${
+                isSelected
+                  ? 'border-graft-500 bg-zinc-800'
+                  : 'border-zinc-800 hover:border-zinc-700'
+              }`}
+            >
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-8 flex items-center justify-center">
+                  <div className={`w-3 h-3 rounded-full ${isSelected ? 'bg-graft-400' : 'bg-graft-500'}`}></div>
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-3 mb-1">
+                    <p className="text-sm font-medium text-zinc-100 truncate">
+                      {commitMessage}
+                    </p>
+                    <span className="flex-shrink-0 text-xs text-zinc-500 font-mono">
+                      {commit.short_hash}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-zinc-500">
+                    <span>{commit.author_name}</span>
+                    <span>•</span>
+                    <span>{timeAgo}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Invisible spacer for items below visible range */}
+      <div style={{ height: `${Math.max(0, (commits.length - visibleRange.end) * itemHeight)}px` }} />
+    </div>
+  );
+}
+
 function App() {
   const [repoInfo, setRepoInfo] = useState<RepoInfo | null>(null);
   const [commits, setCommits] = useState<Commit[]>([]);
-  const [selectedCommit, setSelectedCommit] = useState<Commit | null>(null);
+  const [selectedCommitIndex, setSelectedCommitIndex] = useState<number>(-1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const listContainerRef = useRef<HTMLDivElement>(null);
 
   // Detect OS for keyboard shortcut display
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
   const shortcutKey = isMac ? '⌘' : 'Ctrl';
+
+  const selectedCommit = selectedCommitIndex >= 0 ? commits[selectedCommitIndex] : null;
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -232,22 +448,63 @@ function App() {
         e.preventDefault();
         handleOpenRepo();
       }
-      
-      // Escape to deselect commit
+
+      // Cmd+F (Mac) or Ctrl+F (Windows/Linux) to search
+      if ((e.metaKey || e.ctrlKey) && e.key === "f") {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+
+      // Escape to close search or deselect
       if (e.key === "Escape") {
-        setSelectedCommit(null);
+        if (searchOpen) {
+          setSearchOpen(false);
+        } else {
+          setSelectedCommitIndex(-1);
+        }
+      }
+
+      // Arrow keys for navigation (only when repo is open)
+      if (repoInfo && commits.length > 0) {
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          setSelectedCommitIndex((prev) =>
+            prev < commits.length - 1 ? prev + 1 : prev
+          );
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          setSelectedCommitIndex((prev) => (prev > 0 ? prev - 1 : 0));
+        } else if (e.key === "Enter" && selectedCommitIndex >= 0) {
+          // Enter already selects, but this confirms the selection
+          e.preventDefault();
+        }
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [repoInfo, commits.length, selectedCommitIndex, searchOpen]);
+
+  // Scroll selected commit into view
+  useEffect(() => {
+    if (selectedCommitIndex >= 0 && listContainerRef.current) {
+      const itemHeight = 104;
+      const scrollTop = selectedCommitIndex * itemHeight;
+      const containerHeight = listContainerRef.current.clientHeight;
+
+      if (scrollTop < listContainerRef.current.scrollTop) {
+        listContainerRef.current.scrollTop = scrollTop;
+      } else if (scrollTop + itemHeight > listContainerRef.current.scrollTop + containerHeight) {
+        listContainerRef.current.scrollTop = scrollTop + itemHeight - containerHeight;
+      }
+    }
+  }, [selectedCommitIndex]);
 
   const handleOpenRepo = async () => {
     try {
       setLoading(true);
       setError(null);
-      setSelectedCommit(null);
+      setSelectedCommitIndex(-1);
 
       // Open directory picker
       const selected = await open({
@@ -266,7 +523,7 @@ function App() {
         // Fetch commits from the repository
         const commitList = await invoke<Commit[]>("get_commits", {
           path: selected,
-          limit: 100, // Fetch first 100 commits
+          limit: 1000, // Increased limit for virtual scrolling
         });
         setCommits(commitList);
       }
@@ -277,6 +534,11 @@ function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSelectCommit = (commit: Commit) => {
+    const index = commits.findIndex((c) => c.hash === commit.hash);
+    setSelectedCommitIndex(index);
   };
 
   return (
@@ -300,7 +562,7 @@ function App() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex">
+      <main className="flex-1 flex overflow-hidden">
         {!repoInfo ? (
           <div className="flex-1 flex items-center justify-center p-6">
             <div className="flex flex-col items-center gap-6 max-w-md text-center animate-fade-in">
@@ -326,78 +588,43 @@ function App() {
               )}
 
               <p className="text-xs text-zinc-600 mt-4">
-                Press <kbd className="px-2 py-1 bg-zinc-800 rounded text-zinc-300">{shortcutKey}+O</kbd> to open a repository
+                <kbd className="px-2 py-1 bg-zinc-800 rounded text-zinc-300">{shortcutKey}+O</kbd> Open
+                {" | "}
+                <kbd className="px-2 py-1 bg-zinc-800 rounded text-zinc-300">{shortcutKey}+F</kbd> Search
               </p>
             </div>
           </div>
         ) : (
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Commits Section */}
-            <div className="flex-1 overflow-auto px-6 py-4">
-              <div className="max-w-4xl mx-auto">
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-xl font-semibold">
-                    Commit History
-                    <span className="ml-3 text-sm text-zinc-500 font-normal">
-                      {commits.length} commits
-                    </span>
-                  </h2>
-                  <button
-                    onClick={handleOpenRepo}
-                    className="px-4 py-2 text-sm bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 rounded-lg font-medium transition-all duration-200"
-                  >
-                    Open Different Repository
-                  </button>
+            <div ref={listContainerRef} className="flex-1 overflow-hidden">
+              <div className="h-full flex flex-col">
+                <div className="px-6 py-4 border-b border-zinc-800">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-semibold">
+                      Commit History
+                      <span className="ml-3 text-sm text-zinc-500 font-normal">
+                        {commits.length} commits
+                      </span>
+                    </h2>
+                    <button
+                      onClick={handleOpenRepo}
+                      className="px-4 py-2 text-sm bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 rounded-lg font-medium transition-all duration-200"
+                    >
+                      Open Different Repository
+                    </button>
+                  </div>
                 </div>
 
-                {/* Commit List */}
-                <div className="space-y-2">
-                  {commits.map((commit) => {
-                    const date = new Date(commit.timestamp * 1000);
-                    const timeAgo = getTimeAgo(date);
-                    const commitMessage = commit.message.split('\n')[0];
-                    const isSelected = selectedCommit?.hash === commit.hash;
-
-                    return (
-                      <div
-                        key={commit.hash}
-                        onClick={() => setSelectedCommit(commit)}
-                        className={`bg-zinc-900 border rounded-lg p-4 transition-all duration-200 cursor-pointer ${
-                          isSelected
-                            ? 'border-graft-500 bg-zinc-800'
-                            : 'border-zinc-800 hover:border-zinc-700'
-                        }`}
-                      >
-                        <div className="flex items-start gap-4">
-                          {/* Commit Graph Placeholder */}
-                          <div className="flex-shrink-0 w-8 flex items-center justify-center">
-                            <div className={`w-3 h-3 rounded-full ${isSelected ? 'bg-graft-400' : 'bg-graft-500'}`}></div>
-                          </div>
-
-                          {/* Commit Info */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-baseline gap-3 mb-1">
-                              <p className="text-sm font-medium text-zinc-100 truncate">
-                                {commitMessage}
-                              </p>
-                              <span className="flex-shrink-0 text-xs text-zinc-500 font-mono">
-                                {commit.short_hash}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-3 text-xs text-zinc-500">
-                              <span>{commit.author_name}</span>
-                              <span>•</span>
-                              <span>{timeAgo}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {commits.length === 0 && (
-                  <div className="text-center py-12 text-zinc-500">
+                {/* Virtualized Commit List */}
+                {commits.length > 0 ? (
+                  <VirtualCommitList
+                    commits={commits}
+                    selectedCommit={selectedCommit}
+                    onSelectCommit={handleSelectCommit}
+                  />
+                ) : (
+                  <div className="flex-1 flex items-center justify-center text-zinc-500">
                     No commits found in this repository
                   </div>
                 )}
@@ -411,10 +638,18 @@ function App() {
           <CommitDetailsPanel
             commit={selectedCommit}
             repoPath={repoInfo.path}
-            onClose={() => setSelectedCommit(null)}
+            onClose={() => setSelectedCommitIndex(-1)}
           />
         )}
       </main>
+
+      {/* Search Modal */}
+      <SearchModal
+        isOpen={searchOpen}
+        onClose={() => setSearchOpen(false)}
+        commits={commits}
+        onSelect={handleSelectCommit}
+      />
 
       {/* Status Bar */}
       <footer className="px-6 py-2 border-t border-zinc-800 bg-zinc-900 text-xs text-zinc-500 flex items-center justify-between">
@@ -429,12 +664,18 @@ function App() {
           {selectedCommit && (
             <>
               <span className="text-zinc-600">│</span>
-              <span className="text-graft-400">1 selected</span>
+              <span className="text-graft-400">{selectedCommitIndex + 1} of {commits.length}</span>
             </>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <span className="font-mono">Ready</span>
+        <div className="flex items-center gap-2 text-xs">
+          <span className="font-mono">↑↓</span>
+          <span className="text-zinc-600">Navigate</span>
+          <span className="text-zinc-600">│</span>
+          <span className="font-mono">{shortcutKey}+F</span>
+          <span className="text-zinc-600">Search</span>
+          <span className="text-zinc-600">│</span>
+          <span className="text-zinc-600">Ready</span>
         </div>
       </footer>
     </div>
