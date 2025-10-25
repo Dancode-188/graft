@@ -4,6 +4,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { CommitGraph } from "./components/CommitGraph";
 import { CommitListWithGraph } from "./components/CommitListWithGraph";
 import { GraphLegend } from "./components/GraphLegend";
+import { GraphStats } from "./components/GraphStats";
 
 interface RepoInfo {
   name: string;
@@ -342,6 +343,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [showLegend, setShowLegend] = useState(false);
+  const [showStats, setShowStats] = useState(false);
   const listContainerRef = useRef<HTMLDivElement>(null);
 
   // Detect OS for keyboard shortcut display
@@ -524,6 +526,13 @@ function App() {
                     ⓘ Legend
                   </button>
                   <button
+                    onClick={() => setShowStats(!showStats)}
+                    className="px-4 py-2 text-sm bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 rounded-lg font-medium transition-all duration-200"
+                    title="Show repository statistics"
+                  >
+                    📊 Stats
+                  </button>
+                  <button
                     onClick={handleOpenRepo}
                     className="px-4 py-2 text-sm bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 rounded-lg font-medium transition-all duration-200"
                   >
@@ -547,9 +556,9 @@ function App() {
                 </div>
               )}
 
-              {/* Legend Overlay */}
+              {/* Legend and Stats Overlays */}
               {showLegend && (
-                <div className="absolute top-4 right-4 z-40 max-w-xs">
+                <div className="absolute top-4 left-4 z-40 max-w-xs">
                   <div className="relative">
                     <GraphLegend
                       maxLanes={commits.length > 0 
@@ -565,6 +574,23 @@ function App() {
                     />
                     <button
                       onClick={() => setShowLegend(false)}
+                      className="absolute -top-2 -right-2 w-6 h-6 bg-zinc-800 hover:bg-zinc-700 rounded-full text-xs text-zinc-400 hover:text-zinc-200 flex items-center justify-center"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {showStats && (
+                <div className="absolute top-4 right-4 z-40 max-w-xs">
+                  <div className="relative">
+                    <GraphStats
+                      commits={commits}
+                      repoName={repoInfo?.name}
+                    />
+                    <button
+                      onClick={() => setShowStats(false)}
                       className="absolute -top-2 -right-2 w-6 h-6 bg-zinc-800 hover:bg-zinc-700 rounded-full text-xs text-zinc-400 hover:text-zinc-200 flex items-center justify-center"
                     >
                       ✕
