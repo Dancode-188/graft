@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
+import { CommitGraph } from "./components/CommitGraph";
+import { CommitListWithGraph } from "./components/CommitListWithGraph";
 
 interface RepoInfo {
   name: string;
@@ -326,104 +328,6 @@ function SearchModal({
   );
 }
 
-// Virtual Scroll Component for efficient rendering of large lists
-function VirtualCommitList({
-  commits,
-  selectedCommit,
-  onSelectCommit,
-  itemHeight = 104, // Approximate height of each commit item
-}: {
-  commits: Commit[];
-  selectedCommit: Commit | null;
-  onSelectCommit: (commit: Commit) => void;
-  itemHeight?: number;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 20 });
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const handleScroll = () => {
-      const scrollTop = container.scrollTop;
-      const containerHeight = container.clientHeight;
-
-      const start = Math.floor(scrollTop / itemHeight);
-      const end = Math.ceil((scrollTop + containerHeight) / itemHeight);
-
-      setVisibleRange({
-        start: Math.max(0, start - 5), // Buffer of 5 items above
-        end: Math.min(commits.length, end + 5), // Buffer of 5 items below
-      });
-    };
-
-    container.addEventListener("scroll", handleScroll);
-    return () => container.removeEventListener("scroll", handleScroll);
-  }, [commits.length, itemHeight]);
-
-  // Calculate offsets for invisible items
-  const offsetY = visibleRange.start * itemHeight;
-  const visibleCommits = commits.slice(visibleRange.start, visibleRange.end);
-
-  return (
-    <div
-      ref={containerRef}
-      className="flex-1 overflow-auto"
-      style={{ height: "100%" }}
-    >
-      {/* Invisible spacer for items above visible range */}
-      <div style={{ height: `${offsetY}px` }} />
-
-      {/* Visible items */}
-      <div className="space-y-2 px-6 py-4">
-        {visibleCommits.map((commit) => {
-          const timeAgo = getTimeAgo(new Date(commit.timestamp * 1000));
-          const commitMessage = commit.message.split('\n')[0];
-          const isSelected = selectedCommit?.hash === commit.hash;
-
-          return (
-            <div
-              key={commit.hash}
-              onClick={() => onSelectCommit(commit)}
-              className={`bg-zinc-900 border rounded-lg p-4 transition-all duration-200 cursor-pointer ${
-                isSelected
-                  ? 'border-graft-500 bg-zinc-800'
-                  : 'border-zinc-800 hover:border-zinc-700'
-              }`}
-            >
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0 w-8 flex items-center justify-center">
-                  <div className={`w-3 h-3 rounded-full ${isSelected ? 'bg-graft-400' : 'bg-graft-500'}`}></div>
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-3 mb-1">
-                    <p className="text-sm font-medium text-zinc-100 truncate">
-                      {commitMessage}
-                    </p>
-                    <span className="flex-shrink-0 text-xs text-zinc-500 font-mono">
-                      {commit.short_hash}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-zinc-500">
-                    <span>{commit.author_name}</span>
-                    <span>•</span>
-                    <span>{timeAgo}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Invisible spacer for items below visible range */}
-      <div style={{ height: `${Math.max(0, (commits.length - visibleRange.end) * itemHeight)}px` }} />
-    </div>
-  );
-}
-
 function App() {
   const [repoInfo, setRepoInfo] = useState<RepoInfo | null>(null);
   const [commits, setCommits] = useState<Commit[]>([]);
@@ -595,40 +499,36 @@ function App() {
           </div>
         ) : (
           <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Commits Section */}
-            <div ref={listContainerRef} className="flex-1 overflow-hidden">
-              <div className="h-full flex flex-col">
-                <div className="px-6 py-4 border-b border-zinc-800">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold">
-                      Commit History
-                      <span className="ml-3 text-sm text-zinc-500 font-normal">
-                        {commits.length} commits
-                      </span>
-                    </h2>
-                    <button
-                      onClick={handleOpenRepo}
-                      className="px-4 py-2 text-sm bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 rounded-lg font-medium transition-all duration-200"
-                    >
-                      Open Different Repository
-                    </button>
-                  </div>
-                </div>
-
-                {/* Virtualized Commit List */}
-                {commits.length > 0 ? (
-                  <VirtualCommitList
-                    commits={commits}
-                    selectedCommit={selectedCommit}
-                    onSelectCommit={handleSelectCommit}
-                  />
-                ) : (
-                  <div className="flex-1 flex items-center justify-center text-zinc-500">
-                    No commits found in this repository
-                  </div>
-                )}
+            {/* Header Bar */}
+            <div className="px-6 py-4 border-b border-zinc-800">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">
+                  Commit History
+                  <span className="ml-3 text-sm text-zinc-500 font-normal">
+                    {commits.length} commits
+                  </span>
+                </h2>
+                <button
+                  onClick={handleOpenRepo}
+                  className="px-4 py-2 text-sm bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 rounded-lg font-medium transition-all duration-200"
+                >
+                  Open Different Repository
+                </button>
               </div>
             </div>
+
+            {/* Commit List with Graph */}
+            {commits.length > 0 ? (
+              <CommitListWithGraph
+                commits={commits}
+                selectedCommit={selectedCommit}
+                onSelectCommit={handleSelectCommit}
+              />
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-zinc-500">
+                No commits found in this repository
+              </div>
+            )}
           </div>
         )}
 
