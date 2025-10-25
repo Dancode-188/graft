@@ -21,6 +21,14 @@ struct Commit {
     parent_hashes: Vec<String>,
 }
 
+#[derive(Debug, Serialize)]
+struct FileChange {
+    path: String,
+    status: String, // "added", "modified", "deleted", "renamed"
+    insertions: u32,
+    deletions: u32,
+}
+
 #[tauri::command]
 fn open_repository(path: String) -> Result<RepoInfo, String> {
     // Validate path exists
@@ -151,13 +159,88 @@ fn get_commits(path: String, limit: Option<usize>) -> Result<Vec<Commit>, String
     Ok(commits)
 }
 
+#[tauri::command]
+fn get_commit_files(path: String, commit_hash: String) -> Result<Vec<FileChange>, String> {
+    // Open the repository
+    let repo = Repository::open(&path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    // Parse the commit hash
+    let oid = git2::Oid::from_str(&commit_hash)
+        .map_err(|e| format!("Invalid commit hash: {}", e))?;
+
+    // Get the commit
+    let commit = repo.find_commit(oid)
+        .map_err(|e| format!("Failed to find commit: {}", e))?;
+
+    // Get the tree for this commit
+    let commit_tree = commit.tree()
+        .map_err(|e| format!("Failed to get commit tree: {}", e))?;
+
+    // Get the parent tree (or empty tree if no parent)
+    let parent_tree = if commit.parent_count() > 0 {
+        commit.parent(0)
+            .ok()
+            .and_then(|p| p.tree().ok())
+    } else {
+        None
+    };
+
+    // Diff the trees
+    let diff = if let Some(parent_tree) = parent_tree {
+        repo.diff_tree_to_tree(Some(&parent_tree), Some(&commit_tree), None)
+            .map_err(|e| format!("Failed to create diff: {}", e))?
+    } else {
+        // First commit - diff against empty tree
+        repo.diff_tree_to_tree(None, Some(&commit_tree), None)
+            .map_err(|e| format!("Failed to create diff: {}", e))?
+    };
+
+    // Collect file changes
+    let mut file_changes = Vec::new();
+
+    diff.foreach(
+        &mut |delta, _| {
+            let path = delta.new_file()
+                .path()
+                .unwrap_or_else(|| delta.old_file().path().unwrap_or(std::path::Path::new("unknown")))
+                .to_string_lossy()
+                .to_string();
+
+            let status = match delta.status() {
+                git2::Delta::Added => "added",
+                git2::Delta::Deleted => "deleted",
+                git2::Delta::Modified => "modified",
+                git2::Delta::Renamed => "renamed",
+                git2::Delta::Copied => "copied",
+                git2::Delta::TypeChange => "type_change",
+                _ => "unknown",
+            };
+
+            file_changes.push(FileChange {
+                path,
+                status: status.to_string(),
+                insertions: 0,
+                deletions: 0,
+            });
+
+            true
+        },
+        None,
+        None,
+        None,
+    ).map_err(|e| format!("Failed to iterate diff: {}", e))?;
+
+    Ok(file_changes)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .invoke_handler(tauri::generate_handler![open_repository, get_commits])
+        .invoke_handler(tauri::generate_handler![open_repository, get_commits, get_commit_files])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
