@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { CommitGraph } from "./components/CommitGraph";
 import { CommitListWithGraph } from "./components/CommitListWithGraph";
+import { GraphLegend } from "./components/GraphLegend";
 
 interface RepoInfo {
   name: string;
@@ -340,6 +341,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [showLegend, setShowLegend] = useState(false);
   const listContainerRef = useRef<HTMLDivElement>(null);
 
   // Detect OS for keyboard shortcut display
@@ -506,34 +508,71 @@ function App() {
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Header Bar */}
             <div className="px-6 py-4 border-b border-zinc-800">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <h2 className="text-xl font-semibold">
                   Commit History
                   <span className="ml-3 text-sm text-zinc-500 font-normal">
                     {commits.length} commits
                   </span>
                 </h2>
-                <button
-                  onClick={handleOpenRepo}
-                  className="px-4 py-2 text-sm bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 rounded-lg font-medium transition-all duration-200"
-                >
-                  Open Different Repository
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowLegend(!showLegend)}
+                    className="px-4 py-2 text-sm bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 rounded-lg font-medium transition-all duration-200"
+                    title="Show graph legend (? key)"
+                  >
+                    ⓘ Legend
+                  </button>
+                  <button
+                    onClick={handleOpenRepo}
+                    className="px-4 py-2 text-sm bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 rounded-lg font-medium transition-all duration-200"
+                  >
+                    Open Different Repository
+                  </button>
+                </div>
               </div>
             </div>
 
             {/* Commit List with Graph */}
-            {commits.length > 0 ? (
-              <CommitListWithGraph
-                commits={commits}
-                selectedCommit={selectedCommit}
-                onSelectCommit={handleSelectCommit}
-              />
-            ) : (
-              <div className="flex-1 flex items-center justify-center text-zinc-500">
-                No commits found in this repository
-              </div>
-            )}
+            <div className="relative flex-1">
+              {commits.length > 0 ? (
+                <CommitListWithGraph
+                  commits={commits}
+                  selectedCommit={selectedCommit}
+                  onSelectCommit={handleSelectCommit}
+                />
+              ) : (
+                <div className="flex-1 flex items-center justify-center text-zinc-500">
+                  No commits found in this repository
+                </div>
+              )}
+
+              {/* Legend Overlay */}
+              {showLegend && (
+                <div className="absolute top-4 right-4 z-40 max-w-xs">
+                  <div className="relative">
+                    <GraphLegend
+                      maxLanes={commits.length > 0 
+                        ? Math.max(...Array.from(new Map(
+                            commits.map(c => [
+                              c.hash,
+                              (Math.max(...c.parent_hashes.map(ph => 
+                                commits.findIndex(cm => cm.hash === ph)
+                              ), -1) || 0) + 1
+                            ])
+                          ).values())) 
+                        : 0}
+                    />
+                    <button
+                      onClick={() => setShowLegend(false)}
+                      className="absolute -top-2 -right-2 w-6 h-6 bg-zinc-800 hover:bg-zinc-700 rounded-full text-xs text-zinc-400 hover:text-zinc-200 flex items-center justify-center"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

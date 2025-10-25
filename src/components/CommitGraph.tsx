@@ -54,9 +54,10 @@ export const CommitGraph: React.FC<CommitGraphProps> = ({
           key={`edge-${idx}`}
           d={pathD}
           stroke={color}
-          strokeWidth="2"
+          strokeWidth={edge.type === 'merge' ? '2.5' : '2'}
           fill="none"
-          opacity="0.6"
+          opacity={edge.type === 'merge' ? 0.8 : 0.6}
+          strokeDasharray={edge.type === 'merge' ? '4,2' : 'none'}
         />
       );
     });
@@ -70,7 +71,8 @@ export const CommitGraph: React.FC<CommitGraphProps> = ({
 
       const isSelected = commit.hash === selectedCommitHash;
       const color = getBranchColor(node.lane);
-      const dotRadius = isSelected ? 6 : 4;
+      const isMergeCommit = commit.parent_hashes.length > 1;
+      const dotRadius = isSelected ? 6 : isMergeCommit ? 5 : 4;
 
       return (
         <g
@@ -90,6 +92,20 @@ export const CommitGraph: React.FC<CommitGraphProps> = ({
               opacity="0.3"
             />
           )}
+
+          {/* Merge commit indicator (square background) */}
+          {isMergeCommit && !isSelected && (
+            <rect
+              x={node.x + 10 - 6}
+              y={node.y + 40 - 6}
+              width="12"
+              height="12"
+              rx="2"
+              fill={color}
+              opacity="0.15"
+            />
+          )}
+
           {/* Main dot */}
           <circle
             cx={node.x + 10}
@@ -99,6 +115,22 @@ export const CommitGraph: React.FC<CommitGraphProps> = ({
             opacity={isSelected ? 1 : 0.8}
             className="transition-all hover:opacity-100"
           />
+
+          {/* Merge badge - small "M" indicator */}
+          {isMergeCommit && (
+            <text
+              x={node.x + 10}
+              y={node.y + 40 + 8}
+              fontSize="7"
+              fontWeight="bold"
+              fill={color}
+              textAnchor="middle"
+              opacity="0.6"
+              fontFamily="monospace"
+            >
+              M
+            </text>
+          )}
         </g>
       );
     });
