@@ -69,7 +69,6 @@ function getStatusIcon(status: string): { icon: string; color: string; label: st
     deleted: { icon: '✕', color: 'text-red-400', label: 'Deleted' },
     renamed: { icon: '→', color: 'text-yellow-400', label: 'Renamed' },
     copied: { icon: '⊡', color: 'text-purple-400', label: 'Copied' },
-    type_change: { icon: '◇', color: 'text-orange-400', label: 'Type Change' },
   };
   return statusMap[status as keyof typeof statusMap] || { icon: '?', color: 'text-gray-400', label: 'Unknown' };
 }

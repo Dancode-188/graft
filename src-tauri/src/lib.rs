@@ -213,7 +213,6 @@ fn get_commit_files(path: String, commit_hash: String) -> Result<Vec<FileChange>
                 git2::Delta::Modified => "modified",
                 git2::Delta::Renamed => "renamed",
                 git2::Delta::Copied => "copied",
-                git2::Delta::TypeChange => "type_change",
                 _ => "unknown",
             };
 
