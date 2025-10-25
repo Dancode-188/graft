@@ -9,8 +9,42 @@ interface RepoInfo {
   is_bare: boolean;
 }
 
+interface Commit {
+  hash: string;
+  short_hash: string;
+  message: string;
+  author_name: string;
+  author_email: string;
+  timestamp: number;
+  parent_hashes: string[];
+}
+
+// Helper function to format time ago
+function getTimeAgo(date: Date): string {
+  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+  
+  const intervals = {
+    year: 31536000,
+    month: 2592000,
+    week: 604800,
+    day: 86400,
+    hour: 3600,
+    minute: 60,
+  };
+
+  for (const [unit, secondsInUnit] of Object.entries(intervals)) {
+    const interval = Math.floor(seconds / secondsInUnit);
+    if (interval >= 1) {
+      return `${interval} ${unit}${interval === 1 ? '' : 's'} ago`;
+    }
+  }
+
+  return 'just now';
+}
+
 function App() {
   const [repoInfo, setRepoInfo] = useState<RepoInfo | null>(null);
+  const [commits, setCommits] = useState<Commit[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,10 +84,18 @@ function App() {
           path: selected,
         });
         setRepoInfo(info);
+
+        // Fetch commits from the repository
+        const commitList = await invoke<Commit[]>("get_commits", {
+          path: selected,
+          limit: 100, // Fetch first 100 commits
+        });
+        setCommits(commitList);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setRepoInfo(null);
+      setCommits([]);
     } finally {
       setLoading(false);
     }
@@ -109,38 +151,71 @@ function App() {
             </p>
           </div>
         ) : (
-          <div className="w-full max-w-2xl animate-fade-in">
-            <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
-              <h3 className="text-xl font-semibold mb-4">Repository Info</h3>
-              <dl className="space-y-3">
-                <div className="flex justify-between">
-                  <dt className="text-zinc-400">Name:</dt>
-                  <dd className="font-mono text-graft-400">{repoInfo.name}</dd>
+          <div className="w-full h-full flex flex-col animate-fade-in">
+            {/* Commit List */}
+            <div className="flex-1 overflow-auto px-6 py-4">
+              <div className="max-w-6xl mx-auto">
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-xl font-semibold">
+                    Commit History
+                    <span className="ml-3 text-sm text-zinc-500 font-normal">
+                      {commits.length} commits
+                    </span>
+                  </h2>
+                  <button
+                    onClick={handleOpenRepo}
+                    className="px-4 py-2 text-sm bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 rounded-lg font-medium transition-all duration-200"
+                  >
+                    Open Different Repository
+                  </button>
                 </div>
-                <div className="flex justify-between">
-                  <dt className="text-zinc-400">Path:</dt>
-                  <dd className="font-mono text-sm text-zinc-300 truncate max-w-md">
-                    {repoInfo.path}
-                  </dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-zinc-400">Current Branch:</dt>
-                  <dd className="font-mono text-graft-400">{repoInfo.current_branch}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-zinc-400">Type:</dt>
-                  <dd className="text-zinc-300">
-                    {repoInfo.is_bare ? "Bare Repository" : "Working Directory"}
-                  </dd>
-                </div>
-              </dl>
 
-              <button
-                onClick={handleOpenRepo}
-                className="mt-6 w-full px-4 py-2 bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-graft-500 focus:ring-offset-2 focus:ring-offset-zinc-900"
-              >
-                Open Different Repository
-              </button>
+                {/* Commit List */}
+                <div className="space-y-2">
+                  {commits.map((commit) => {
+                    const date = new Date(commit.timestamp * 1000);
+                    const timeAgo = getTimeAgo(date);
+                    const commitMessage = commit.message.split('\n')[0]; // First line only
+
+                    return (
+                      <div
+                        key={commit.hash}
+                        className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 hover:border-zinc-700 transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-start gap-4">
+                          {/* Commit Graph Placeholder */}
+                          <div className="flex-shrink-0 w-8 flex items-center justify-center">
+                            <div className="w-3 h-3 rounded-full bg-graft-500"></div>
+                          </div>
+
+                          {/* Commit Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-baseline gap-3 mb-1">
+                              <p className="text-sm font-medium text-zinc-100 truncate">
+                                {commitMessage}
+                              </p>
+                              <span className="flex-shrink-0 text-xs text-zinc-500 font-mono">
+                                {commit.short_hash}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-zinc-500">
+                              <span>{commit.author_name}</span>
+                              <span>•</span>
+                              <span>{timeAgo}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {commits.length === 0 && (
+                  <div className="text-center py-12 text-zinc-500">
+                    No commits found in this repository
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -149,7 +224,13 @@ function App() {
       {/* Status Bar */}
       <footer className="px-6 py-2 border-t border-zinc-800 bg-zinc-900 text-xs text-zinc-500 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <span>Phase 0: Foundation Complete ✅</span>
+          <span>Phase 1: Commit History 🚀</span>
+          {commits.length > 0 && (
+            <>
+              <span className="text-zinc-600">│</span>
+              <span>{commits.length} commits loaded</span>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <span className="font-mono">Ready</span>
