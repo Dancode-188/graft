@@ -22,8 +22,8 @@ export const CommitGraph: React.FC<CommitGraphProps> = ({
   const layout = useMemo(() => calculateGraphLayout(commits), [commits]);
   const edges = useMemo(() => getEdgePaths(commits, layout), [commits, layout]);
 
-  // SVG dimensions
-  const graphWidth = Math.max(200, (layout.maxLane + 2) * 40);
+  // SVG dimensions - increase width for branch labels
+  const graphWidth = Math.max(350, (layout.maxLane + 2) * 40 + 180);
   const graphHeight = commits.length * 80;
 
   // Create SVG path for connecting lines
@@ -104,6 +104,67 @@ export const CommitGraph: React.FC<CommitGraphProps> = ({
     });
   };
 
+  // Render branch labels
+  const renderBranchLabels = () => {
+    return commits.map((commit) => {
+      const node = layout.nodes.get(commit.hash);
+      if (!node || commit.branches.length === 0) return null;
+
+      // Separate local and remote branches
+      const localBranches = commit.branches.filter(b => !b.is_remote);
+      const remoteBranches = commit.branches.filter(b => b.is_remote);
+      const branches = [...localBranches, ...remoteBranches]; // Local first
+
+      // Position labels to the right of the commit dot
+      const labelX = node.x + 50;
+      const labelY = node.y + 40;
+
+      return (
+        <g key={`labels-${commit.hash}`}>
+          {branches.map((branch, idx) => {
+            const offsetY = idx * 16; // Stack labels vertically
+            const bgColor = branch.is_current
+              ? '#22c55e'
+              : branch.is_remote
+                ? '#3b82f6'
+                : '#8b5cf6';
+            const opacity = branch.is_current ? 1 : 0.7;
+
+            return (
+              <g key={`branch-${branch.name}`}>
+                {/* Background pill */}
+                <rect
+                  x={labelX - 2}
+                  y={labelY - 6 + offsetY}
+                  width={branch.name.length * 5 + 6}
+                  height="14"
+                  rx="7"
+                  fill={bgColor}
+                  opacity={opacity * 0.2}
+                  stroke={bgColor}
+                  strokeWidth="1"
+                />
+                {/* Branch name text */}
+                <text
+                  x={labelX + 2}
+                  y={labelY + 4 + offsetY}
+                  fontSize="11"
+                  fontWeight="500"
+                  fill={bgColor}
+                  opacity={opacity}
+                  fontFamily="monospace"
+                >
+                  {branch.is_remote ? `${branch.name.split('/')[0]}/` : ''}
+                  {branch.name.split('/').pop()}
+                </text>
+              </g>
+            );
+          })}
+        </g>
+      );
+    });
+  };
+
   return (
     <svg
       width={graphWidth}
@@ -128,6 +189,9 @@ export const CommitGraph: React.FC<CommitGraphProps> = ({
 
       {/* Draw dots (commits) */}
       {renderDots()}
+
+      {/* Draw branch labels */}
+      {renderBranchLabels()}
     </svg>
   );
 };

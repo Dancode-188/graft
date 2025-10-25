@@ -90,8 +90,8 @@ export const CommitListWithGraph: React.FC<CommitListWithGraphProps> = ({
       {/* Graph - Scrollable SVG */}
       <div
         ref={graphScrollRef}
-        className="overflow-y-auto overflow-x-hidden border-r border-zinc-800 bg-zinc-950"
-        style={{ width: '200px', flex: '0 0 200px' }}
+        className="overflow-y-auto overflow-x-auto border-r border-zinc-800 bg-zinc-950"
+        style={{ flex: '0 0 450px' }}
       >
         <CommitGraph
           commits={commits}

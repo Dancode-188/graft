@@ -19,6 +19,11 @@ interface Commit {
   author_email: string;
   timestamp: number;
   parent_hashes: string[];
+  branches: Array<{
+    name: string;
+    is_remote: boolean;
+    is_current: boolean;
+  }>;
 }
 
 interface FileChange {

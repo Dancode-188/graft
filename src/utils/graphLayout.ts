@@ -3,6 +3,12 @@
  * Calculates positions for commits and determines branch lanes
  */
 
+export interface BranchRef {
+  name: string;
+  is_remote: boolean;
+  is_current: boolean;
+}
+
 export interface Commit {
   hash: string;
   short_hash: string;
@@ -11,6 +17,7 @@ export interface Commit {
   author_email: string;
   timestamp: number;
   parent_hashes: string[];
+  branches: BranchRef[];
 }
 
 export interface GraphNode {

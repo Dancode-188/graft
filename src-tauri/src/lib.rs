@@ -10,6 +10,13 @@ struct RepoInfo {
     is_bare: bool,
 }
 
+#[derive(Debug, Serialize, Clone)]
+struct BranchRef {
+    name: String,
+    is_remote: bool,
+    is_current: bool,
+}
+
 #[derive(Debug, Serialize)]
 struct Commit {
     hash: String,
@@ -19,6 +26,7 @@ struct Commit {
     author_email: String,
     timestamp: i64,
     parent_hashes: Vec<String>,
+    branches: Vec<BranchRef>,
 }
 
 #[derive(Debug, Serialize)]
@@ -95,6 +103,46 @@ fn get_commits(path: String, limit: Option<usize>) -> Result<Vec<Commit>, String
     let repo = Repository::open(&path)
         .map_err(|e| format!("Failed to open repository: {}", e))?;
 
+    // Get the HEAD reference for checking current branch
+    let head_branch = repo.head()
+        .ok()
+        .and_then(|h| h.shorthand().map(|s| s.to_string()));
+
+    // Build a map of commit OIDs to branch references
+    let mut oid_to_branches: std::collections::HashMap<git2::Oid, Vec<BranchRef>> = std::collections::HashMap::new();
+
+    // Iterate through all branches (local and remote)
+    let branches = repo.branches(None)
+        .map_err(|e| format!("Failed to iterate branches: {}", e))?;
+
+    for branch_result in branches {
+        let (branch, branch_type) = branch_result
+            .map_err(|e| format!("Failed to get branch: {}", e))?;
+
+        let branch_name = branch.name()
+            .map_err(|e| format!("Failed to get branch name: {}", e))?
+            .unwrap_or("unknown")
+            .to_string();
+
+        let is_remote = branch_type == git2::BranchType::Remote;
+
+        // Get the commit that this branch points to
+        if let Ok(reference) = branch.get() {
+            if let Some(oid) = reference.target() {
+                let is_current = !is_remote && head_branch.as_ref().map_or(false, |hb| hb == &branch_name);
+                
+                oid_to_branches
+                    .entry(oid)
+                    .or_insert_with(Vec::new)
+                    .push(BranchRef {
+                        name: branch_name,
+                        is_remote,
+                        is_current,
+                    });
+            }
+        }
+    }
+
     // Get the HEAD reference
     let head = repo.head()
         .map_err(|e| format!("Failed to get HEAD: {}", e))?;
@@ -145,6 +193,12 @@ fn get_commits(path: String, limit: Option<usize>) -> Result<Vec<Commit>, String
             .map(|p| p.id().to_string())
             .collect();
 
+        // Get branches pointing to this commit
+        let branches = oid_to_branches
+            .get(&oid)
+            .cloned()
+            .unwrap_or_default();
+
         commits.push(Commit {
             hash: oid.to_string(),
             short_hash: oid.to_string()[..7].to_string(),
@@ -153,6 +207,7 @@ fn get_commits(path: String, limit: Option<usize>) -> Result<Vec<Commit>, String
             author_email,
             timestamp,
             parent_hashes,
+            branches,
         });
     }
 
