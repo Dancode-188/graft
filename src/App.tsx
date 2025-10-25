@@ -95,7 +95,7 @@ function CommitDetailsPanel({
       
       invoke<FileChange[]>("get_commit_files", {
         path: repoPath,
-        commit_hash: commit.hash,
+        commitHash: commit.hash,
       })
         .then((files) => {
           setFiles(files);
