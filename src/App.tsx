@@ -553,7 +553,7 @@ function App() {
       {/* Status Bar */}
       <footer className="px-6 py-2 border-t border-zinc-800 bg-zinc-900 text-xs text-zinc-500 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <span>Phase 1: Commit History 🚀</span>
+          <span>Phase 2: Git Graph Visualization 🌳</span>
           {commits.length > 0 && (
             <>
               <span className="text-zinc-600">│</span>

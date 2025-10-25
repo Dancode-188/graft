@@ -79,7 +79,22 @@
 ### 🌳 Phase 2: Beautiful Commit Graph (Week 5-6) 🚀 **IN PROGRESS**
 **Goal**: Visualize branch history beautifully
 
-#### Features
+#### Completed (Session 1)
+- [x] Graph layout algorithm (lane calculation)
+- [x] SVG-based visualization component
+- [x] Color-coded branch lanes
+- [x] Commit dots with hover effects
+- [x] Connection lines (parent-child relationships)
+- [x] Synchronized scrolling between graph and list
+- [x] Interactive commit selection from graph
+
+#### In Progress
+- [ ] Merge commit visualization (crossing lines)
+- [ ] Branch name labels
+- [ ] Performance optimization for 1000+ commits
+- [ ] Better lane assignment algorithm
+
+#### TODO
 - [ ] Visual commit graph (GitKraken-style)
 - [ ] Color-coded branches
 - [ ] Merge commit visualization
@@ -381,5 +396,6 @@
 **Start Date**: October 2024  
 **Phase 0 Complete**: October 25, 2025 ✅  
 **Phase 1 Complete**: October 26, 2025 ✅  
+**Phase 2 Started**: October 26, 2025 🚀  
 **Target v1.0**: April 2025  
-**Current Status**: Phase 1 Complete - Starting Phase 2 (Git Graph Visualization)! 🚀
+**Current Status**: Phase 2 In Progress - Building visual git graph visualization! 🌳
