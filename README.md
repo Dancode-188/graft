@@ -241,3 +241,4 @@ If you like Graft, give it a ⭐ on GitHub!
 ---
 
 **Built with 🌿 by developers who are tired of bad Git GUIs**
+
