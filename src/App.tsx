@@ -26,6 +26,11 @@ interface Commit {
     is_remote: boolean;
     is_current: boolean;
   }>;
+  tags: Array<{
+    name: string;
+    is_annotated: boolean;
+    is_remote: boolean;
+  }>;
 }
 
 interface FileChange {
@@ -160,6 +165,31 @@ function CommitDetailsPanel({
           <p className="text-xs text-zinc-300 whitespace-pre-wrap font-mono bg-zinc-950 p-2 rounded border border-zinc-800">
             {commit.message}
           </p>
+        </div>
+      )}
+
+      {/* Tags Section */}
+      {commit.tags && commit.tags.length > 0 && (
+        <div className="border-b border-zinc-800 p-4">
+          <h4 className="text-xs font-semibold text-zinc-300 mb-2 uppercase tracking-wider">
+            Tags ({commit.tags.length})
+          </h4>
+          <div className="flex flex-wrap gap-2">
+            {commit.tags.map((tag) => (
+              <div
+                key={tag.name}
+                className={`px-2 py-1 rounded text-xs font-mono flex items-center gap-1 ${
+                  tag.is_remote
+                    ? 'bg-cyan-500 bg-opacity-20 border border-cyan-600 text-cyan-300'
+                    : 'bg-amber-500 bg-opacity-20 border border-amber-600 text-amber-300'
+                }`}
+              >
+                <span className="text-xs">🏷️</span>
+                <span>{tag.name.split('/').pop()}</span>
+                {tag.is_annotated && <span className="text-xs opacity-60">†</span>}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -543,7 +573,7 @@ function App() {
             </div>
 
             {/* Commit List with Graph */}
-            <div className="relative flex-1">
+            <div className="relative flex-1 overflow-hidden h-full">
               {commits.length > 0 ? (
                 <CommitListWithGraph
                   commits={commits}

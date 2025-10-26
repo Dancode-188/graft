@@ -96,6 +96,28 @@ export const GraphLegend: React.FC<LegendProps> = ({ maxLanes }) => {
           <span className="text-xs text-zinc-400">Merge integration</span>
         </div>
       </div>
+
+      {/* Tags visualization */}
+      <div className="border-t border-zinc-800 pt-2 mt-2">
+        <div className="text-xs text-zinc-500 mb-2">Tags:</div>
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <div className="px-1.5 py-0.5 bg-amber-500 bg-opacity-20 border border-amber-600 rounded text-xs text-amber-300 font-mono">
+              v1.0.0
+            </div>
+            <span className="text-xs text-zinc-400">Local tag</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="px-1.5 py-0.5 bg-cyan-500 bg-opacity-20 border border-cyan-600 rounded text-xs text-cyan-300 font-mono">
+              origin/v1.0.0
+            </div>
+            <span className="text-xs text-zinc-400">Remote tag</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-zinc-400">† = Annotated tag (lightweight tags have no indicator)</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

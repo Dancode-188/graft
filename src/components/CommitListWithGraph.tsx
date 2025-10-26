@@ -86,12 +86,12 @@ export const CommitListWithGraph: React.FC<CommitListWithGraphProps> = ({
   };
 
   return (
-    <div className="flex flex-1 overflow-hidden gap-0 bg-zinc-950">
+    <div className="flex flex-1 overflow-hidden gap-0 bg-zinc-950 w-full h-full">
       {/* Graph - Scrollable SVG */}
       <div
         ref={graphScrollRef}
         className="overflow-y-auto overflow-x-auto border-r border-zinc-800 bg-zinc-950"
-        style={{ flex: '0 0 450px' }}
+        style={{ flex: '0 0 450px', height: '100%', minHeight: 0 }}
       >
         <CommitGraph
           commits={commits}
@@ -104,7 +104,7 @@ export const CommitListWithGraph: React.FC<CommitListWithGraphProps> = ({
       <div
         ref={listScrollRef}
         className="flex-1 overflow-auto"
-        style={{ height: '100%' }}
+        style={{ height: '100%', minHeight: 0 }}
       >
         <div className="space-y-2 px-6 py-4">
           {/* Invisible spacer for items above visible range */}

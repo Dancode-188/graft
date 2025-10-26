@@ -17,6 +17,13 @@ struct BranchRef {
     is_current: bool,
 }
 
+#[derive(Debug, Serialize, Clone)]
+struct TagRef {
+    name: String,
+    is_annotated: bool,
+    is_remote: bool,
+}
+
 #[derive(Debug, Serialize)]
 struct Commit {
     hash: String,
@@ -27,6 +34,7 @@ struct Commit {
     timestamp: i64,
     parent_hashes: Vec<String>,
     branches: Vec<BranchRef>,
+    tags: Vec<TagRef>,
 }
 
 #[derive(Debug, Serialize)]
@@ -127,18 +135,42 @@ fn get_commits(path: String, limit: Option<usize>) -> Result<Vec<Commit>, String
         let is_remote = branch_type == git2::BranchType::Remote;
 
         // Get the commit that this branch points to
-        if let Ok(reference) = branch.get() {
-            if let Some(oid) = reference.target() {
-                let is_current = !is_remote && head_branch.as_ref().map_or(false, |hb| hb == &branch_name);
-                
-                oid_to_branches
-                    .entry(oid)
-                    .or_insert_with(Vec::new)
-                    .push(BranchRef {
-                        name: branch_name,
-                        is_remote,
-                        is_current,
-                    });
+        let reference = branch.get();
+        if let Some(oid) = reference.target() {
+            let is_current = !is_remote && head_branch.as_ref().map_or(false, |hb| hb == &branch_name);
+            
+            oid_to_branches
+                .entry(oid)
+                .or_insert_with(Vec::new)
+                .push(BranchRef {
+                    name: branch_name,
+                    is_remote,
+                    is_current,
+                });
+        }
+    }
+
+    // Build a map of commit OIDs to tag references
+    let mut oid_to_tags: std::collections::HashMap<git2::Oid, Vec<TagRef>> = std::collections::HashMap::new();
+
+    // Iterate through all tags
+    if let Ok(tag_names) = repo.tag_names(None) {
+        for tag_name in tag_names.iter().flatten() {
+            if let Ok(reference) = repo.resolve_reference_from_short_name(tag_name) {
+                // Try to get the OID directly from the reference
+                if let Some(oid) = reference.target() {
+                    // Check if this is an annotated tag
+                    let is_annotated = reference.is_tag();
+                    
+                    oid_to_tags
+                        .entry(oid)
+                        .or_insert_with(Vec::new)
+                        .push(TagRef {
+                            name: tag_name.to_string(),
+                            is_annotated,
+                            is_remote: tag_name.contains("remotes/"),
+                        });
+                }
             }
         }
     }
@@ -159,9 +191,29 @@ fn get_commits(path: String, limit: Option<usize>) -> Result<Vec<Commit>, String
     revwalk.set_sorting(Sort::TIME)
         .map_err(|e| format!("Failed to set sorting: {}", e))?;
 
-    // Start from HEAD
-    revwalk.push(head_commit.id())
-        .map_err(|e| format!("Failed to push HEAD: {}", e))?;
+    // Push ALL branch heads to revwalk (equivalent to git log --all)
+    // This ensures we see commits from all branches, not just HEAD
+    let branches = repo.branches(None)
+        .map_err(|e| format!("Failed to iterate branches: {}", e))?;
+
+    let mut has_pushed_ref = false;
+    for branch_result in branches {
+        let (branch, _branch_type) = branch_result
+            .map_err(|e| format!("Failed to get branch: {}", e))?;
+
+        let reference = branch.get();
+        if let Some(oid) = reference.target() {
+            revwalk.push(oid)
+                .map_err(|e| format!("Failed to push branch: {}", e))?;
+            has_pushed_ref = true;
+        }
+    }
+
+    // If no branches were found (shouldn't happen), fall back to HEAD
+    if !has_pushed_ref {
+        revwalk.push(head_commit.id())
+            .map_err(|e| format!("Failed to push HEAD: {}", e))?;
+    }
 
     // Collect commits
     let mut commits = Vec::new();
@@ -199,6 +251,12 @@ fn get_commits(path: String, limit: Option<usize>) -> Result<Vec<Commit>, String
             .cloned()
             .unwrap_or_default();
 
+        // Get tags pointing to this commit
+        let tags = oid_to_tags
+            .get(&oid)
+            .cloned()
+            .unwrap_or_default();
+
         commits.push(Commit {
             hash: oid.to_string(),
             short_hash: oid.to_string()[..7].to_string(),
@@ -208,6 +266,7 @@ fn get_commits(path: String, limit: Option<usize>) -> Result<Vec<Commit>, String
             timestamp,
             parent_hashes,
             branches,
+            tags,
         });
     }
 
