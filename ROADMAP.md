@@ -116,18 +116,18 @@
 
 ---
 
-### ✏️ Phase 3: Staging & Commits (Week 7-8)
+### ✏️ Phase 3: Staging & Commits (Week 7-8) ✅ **COMPLETE**
 **Goal**: Make commits through the GUI
 
 #### Features
-- [ ] Working directory file list
-- [ ] Show modified/added/deleted files
-- [ ] Stage/unstage individual files
-- [ ] Commit message input (multi-line)
-- [ ] Validate commit messages
-- [ ] Show diff preview when selecting files
-- [ ] Keyboard shortcuts (Cmd+Enter to commit)
-- [ ] Commit history updates after commit
+- [x] Working directory file list
+- [x] Show modified/added/deleted files
+- [x] Stage/unstage individual files
+- [x] Commit message input (multi-line)
+- [x] Validate commit messages
+- [x] Show diff preview when selecting files
+- [x] Keyboard shortcuts (Cmd+Enter to commit)
+- [x] Commit history updates after commit
 
 #### UI Components
 - Split view: Unstaged | Staged
@@ -139,6 +139,8 @@
 - ✅ Can write commit messages easily
 - ✅ Commits appear in history immediately
 - ✅ Workflow feels natural and fast
+
+**Completion Date**: October 26, 2025 ✅
 
 ---
 
@@ -396,6 +398,6 @@
 **Phase 0 Complete**: October 25, 2025 ✅  
 **Phase 1 Complete**: October 26, 2025 ✅  
 **Phase 2 Complete**: October 26, 2025 ✅  
-**Phase 2 Status**: Beautiful commit graph visualization complete with tags, performance optimized!
+**Phase 3 Complete**: October 26, 2025 ✅  
 **Target v1.0**: April 2025  
-**Current Status**: Phase 2 Complete - Ready for Phase 3: Staging & Commits! 🚀
+**Current Status**: Phase 3 Complete - Ready for Phase 4: Diff Viewer! 🎨
