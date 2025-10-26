@@ -5,6 +5,7 @@ import { CommitGraph } from "./components/CommitGraph";
 import { CommitListWithGraph } from "./components/CommitListWithGraph";
 import { GraphLegend } from "./components/GraphLegend";
 import { GraphStats } from "./components/GraphStats";
+import { StagingArea } from "./components/staging/StagingArea";
 
 interface RepoInfo {
   name: string;
@@ -125,7 +126,7 @@ function CommitDetailsPanel({
 
   if (!commit) {
     return (
-      <div className="w-96 border-l border-zinc-800 bg-zinc-900 flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center bg-zinc-900 p-6">
         <div className="text-center text-zinc-500">
           <p className="text-sm">Select a commit to view details</p>
         </div>
@@ -136,7 +137,7 @@ function CommitDetailsPanel({
   const date = new Date(commit.timestamp * 1000);
 
   return (
-    <div className="w-96 border-l border-zinc-800 bg-zinc-900 flex flex-col overflow-hidden">
+    <div className="flex-1 flex flex-col overflow-hidden bg-zinc-900">
       {/* Details Header */}
       <div className="border-b border-zinc-800 p-4">
         <div className="flex items-start justify-between gap-4">
@@ -374,6 +375,7 @@ function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [showLegend, setShowLegend] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [rightPanelTab, setRightPanelTab] = useState<'details' | 'staging'>('staging');
   const listContainerRef = useRef<HTMLDivElement>(null);
 
   // Detect OS for keyboard shortcut display
@@ -481,6 +483,23 @@ function App() {
   const handleSelectCommit = (commit: Commit) => {
     const index = commits.findIndex((c) => c.hash === commit.hash);
     setSelectedCommitIndex(index);
+    setRightPanelTab('details'); // Switch to details when selecting a commit
+  };
+
+  const handleCommitCreated = async () => {
+    // Refresh commit history after creating a commit
+    if (repoInfo) {
+      try {
+        const commitList = await invoke<Commit[]>("get_commits", {
+          path: repoInfo.path,
+          limit: 1000,
+        });
+        setCommits(commitList);
+        setSelectedCommitIndex(-1); // Deselect after refresh
+      } catch (err) {
+        console.error("Failed to refresh commits:", err);
+      }
+    }
   };
 
   return (
@@ -632,13 +651,49 @@ function App() {
           </div>
         )}
 
-        {/* Details Panel */}
+        {/* Right Panel with Tabs */}
         {repoInfo && (
-          <CommitDetailsPanel
-            commit={selectedCommit}
-            repoPath={repoInfo.path}
-            onClose={() => setSelectedCommitIndex(-1)}
-          />
+          <div className="w-96 border-l border-zinc-800 bg-zinc-900 flex flex-col">
+            {/* Tab Header */}
+            <div className="border-b border-zinc-800 flex">
+              <button
+                onClick={() => setRightPanelTab('staging')}
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                  rightPanelTab === 'staging'
+                    ? 'bg-zinc-950 text-zinc-100 border-b-2 border-graft-500'
+                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800'
+                }`}
+              >
+                📝 Staging
+              </button>
+              <button
+                onClick={() => setRightPanelTab('details')}
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+                  rightPanelTab === 'details'
+                    ? 'bg-zinc-950 text-zinc-100 border-b-2 border-graft-500'
+                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800'
+                }`}
+              >
+                🔍 Details
+              </button>
+            </div>
+
+            {/* Tab Content */}
+            <div className="flex-1 overflow-hidden">
+              {rightPanelTab === 'staging' ? (
+                <StagingArea
+                  repoPath={repoInfo.path}
+                  onCommitCreated={handleCommitCreated}
+                />
+              ) : (
+                <CommitDetailsPanel
+                  commit={selectedCommit}
+                  repoPath={repoInfo.path}
+                  onClose={() => setSelectedCommitIndex(-1)}
+                />
+              )}
+            </div>
+          </div>
         )}
       </main>
 
@@ -653,7 +708,7 @@ function App() {
       {/* Status Bar */}
       <footer className="px-6 py-2 border-t border-zinc-800 bg-zinc-900 text-xs text-zinc-500 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <span>Phase 2: Git Graph Visualization 🌳</span>
+          <span>Phase 3: Staging & Commits ✏️</span>
           {commits.length > 0 && (
             <>
               <span className="text-zinc-600">│</span>

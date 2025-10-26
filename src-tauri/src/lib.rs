@@ -45,6 +45,26 @@ struct FileChange {
     deletions: u32,
 }
 
+#[derive(Debug, Serialize)]
+struct WorkingDirectoryFile {
+    path: String,
+    status: String, // "modified", "added", "deleted", "renamed", "conflicted"
+    is_staged: bool,
+}
+
+#[derive(Debug, Serialize)]
+struct WorkingDirectoryStatus {
+    staged: Vec<WorkingDirectoryFile>,
+    unstaged: Vec<WorkingDirectoryFile>,
+}
+
+#[derive(Debug, Serialize)]
+struct CommitResult {
+    success: bool,
+    commit_hash: String,
+    message: String,
+}
+
 #[tauri::command]
 fn open_repository(path: String) -> Result<RepoInfo, String> {
     // Validate path exists
@@ -347,13 +367,234 @@ fn get_commit_files(path: String, commit_hash: String) -> Result<Vec<FileChange>
     Ok(file_changes)
 }
 
+#[tauri::command]
+fn get_working_directory_status(path: String) -> Result<WorkingDirectoryStatus, String> {
+    // Open the repository
+    let repo = Repository::open(&path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    let mut staged = Vec::new();
+    let mut unstaged = Vec::new();
+
+    // Get the status for each file
+    let statuses = repo.statuses(None)
+        .map_err(|e| format!("Failed to get repository status: {}", e))?;
+
+    for entry in statuses.iter() {
+        let file_path = entry.path().unwrap_or("unknown").to_string();
+        let status = entry.status();
+
+        // Check if file is in index (staged)
+        if status.is_index_new() {
+            staged.push(WorkingDirectoryFile {
+                path: file_path.clone(),
+                status: "added".to_string(),
+                is_staged: true,
+            });
+        } else if status.is_index_modified() {
+            staged.push(WorkingDirectoryFile {
+                path: file_path.clone(),
+                status: "modified".to_string(),
+                is_staged: true,
+            });
+        } else if status.is_index_deleted() {
+            staged.push(WorkingDirectoryFile {
+                path: file_path.clone(),
+                status: "deleted".to_string(),
+                is_staged: true,
+            });
+        } else if status.is_index_renamed() {
+            staged.push(WorkingDirectoryFile {
+                path: file_path.clone(),
+                status: "renamed".to_string(),
+                is_staged: true,
+            });
+        }
+
+        // Check if file is in working tree (unstaged)
+        if status.is_wt_new() {
+            unstaged.push(WorkingDirectoryFile {
+                path: file_path.clone(),
+                status: "added".to_string(),
+                is_staged: false,
+            });
+        } else if status.is_wt_modified() {
+            unstaged.push(WorkingDirectoryFile {
+                path: file_path.clone(),
+                status: "modified".to_string(),
+                is_staged: false,
+            });
+        } else if status.is_wt_deleted() {
+            unstaged.push(WorkingDirectoryFile {
+                path: file_path.clone(),
+                status: "deleted".to_string(),
+                is_staged: false,
+            });
+        } else if status.is_wt_renamed() {
+            unstaged.push(WorkingDirectoryFile {
+                path: file_path.clone(),
+                status: "renamed".to_string(),
+                is_staged: false,
+            });
+        }
+
+        // Check for conflicts
+        if status.is_conflicted() {
+            unstaged.push(WorkingDirectoryFile {
+                path: file_path,
+                status: "conflicted".to_string(),
+                is_staged: false,
+            });
+        }
+    }
+
+    Ok(WorkingDirectoryStatus { staged, unstaged })
+}
+
+#[tauri::command]
+fn stage_files(path: String, file_paths: Vec<String>) -> Result<String, String> {
+    // Open the repository
+    let repo = Repository::open(&path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    // Get the index
+    let mut index = repo.index()
+        .map_err(|e| format!("Failed to get repository index: {}", e))?;
+
+    // Add each file to the index
+    for file_path in file_paths {
+        index.add_path(std::path::Path::new(&file_path))
+            .map_err(|e| format!("Failed to stage file {}: {}", file_path, e))?;
+    }
+
+    // Write the index
+    index.write()
+        .map_err(|e| format!("Failed to write index: {}", e))?;
+
+    Ok("Files staged successfully".to_string())
+}
+
+#[tauri::command]
+fn unstage_files(path: String, file_paths: Vec<String>) -> Result<String, String> {
+    // Open the repository
+    let repo = Repository::open(&path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    // Get HEAD commit
+    let head = repo.head()
+        .map_err(|e| format!("Failed to get HEAD: {}", e))?;
+    let head_commit = head.peel_to_commit()
+        .map_err(|e| format!("Failed to get HEAD commit: {}", e))?;
+    let head_tree = head_commit.tree()
+        .map_err(|e| format!("Failed to get HEAD tree: {}", e))?;
+
+    // Get the index
+    let mut index = repo.index()
+        .map_err(|e| format!("Failed to get repository index: {}", e))?;
+
+    // Reset each file to HEAD
+    for file_path in file_paths {
+        let tree_entry = head_tree.get_path(std::path::Path::new(&file_path));
+        
+        if let Ok(entry) = tree_entry {
+            // File exists in HEAD, reset to that version using add_frombuffer
+            let obj = entry.to_object(&repo)
+                .map_err(|e| format!("Failed to get object for {}: {}", file_path, e))?;
+            let blob = obj.as_blob()
+                .ok_or_else(|| format!("Object is not a blob: {}", file_path))?;
+            
+            index.add_frombuffer(
+                &git2::IndexEntry {
+                    ctime: git2::IndexTime::new(0, 0),
+                    mtime: git2::IndexTime::new(0, 0),
+                    dev: 0,
+                    ino: 0,
+                    mode: entry.filemode() as u32,
+                    uid: 0,
+                    gid: 0,
+                    file_size: blob.size() as u32,
+                    id: entry.id(),
+                    flags: 0,
+                    flags_extended: 0,
+                    path: file_path.as_bytes().to_vec(),
+                },
+                blob.content()
+            ).map_err(|e| format!("Failed to reset file {}: {}", file_path, e))?;
+        } else {
+            // File doesn't exist in HEAD (new file), remove from index
+            index.remove_path(std::path::Path::new(&file_path))
+                .map_err(|e| format!("Failed to unstage file {}: {}", file_path, e))?;
+        }
+    }
+
+    // Write the index
+    index.write()
+        .map_err(|e| format!("Failed to write index: {}", e))?;
+
+    Ok("Files unstaged successfully".to_string())
+}
+
+#[tauri::command]
+fn create_commit(path: String, message: String) -> Result<CommitResult, String> {
+    // Validate commit message
+    if message.trim().is_empty() {
+        return Err("Commit message cannot be empty".to_string());
+    }
+
+    // Open the repository
+    let repo = Repository::open(&path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    // Get the signature (author)
+    let signature = repo.signature()
+        .map_err(|e| format!("Failed to get signature: {}", e))?;
+
+    // Get the current HEAD
+    let head = repo.head()
+        .map_err(|e| format!("Failed to get HEAD: {}", e))?;
+    let parent_commit = head.peel_to_commit()
+        .map_err(|e| format!("Failed to get parent commit: {}", e))?;
+
+    // Get the index and write it as a tree
+    let mut index = repo.index()
+        .map_err(|e| format!("Failed to get index: {}", e))?;
+    let tree_id = index.write_tree()
+        .map_err(|e| format!("Failed to write tree: {}", e))?;
+    let tree = repo.find_tree(tree_id)
+        .map_err(|e| format!("Failed to find tree: {}", e))?;
+
+    // Create the commit
+    let commit_id = repo.commit(
+        Some("HEAD"),
+        &signature,
+        &signature,
+        &message,
+        &tree,
+        &[&parent_commit],
+    ).map_err(|e| format!("Failed to create commit: {}", e))?;
+
+    Ok(CommitResult {
+        success: true,
+        commit_hash: commit_id.to_string(),
+        message: "Commit created successfully".to_string(),
+    })
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .invoke_handler(tauri::generate_handler![open_repository, get_commits, get_commit_files])
+        .invoke_handler(tauri::generate_handler![
+            open_repository,
+            get_commits,
+            get_commit_files,
+            get_working_directory_status,
+            stage_files,
+            unstage_files,
+            create_commit
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
