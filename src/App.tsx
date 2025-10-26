@@ -510,7 +510,7 @@ function App() {
           <h1 className="text-2xl font-bold tracking-tight">
             <span className="text-graft-500">Graft</span>
           </h1>
-          <span className="text-xs text-zinc-500 font-mono">v0.1.0</span>
+          <span className="text-xs text-zinc-500 font-mono">v0.3.0</span>
         </div>
         {repoInfo && (
           <div className="flex items-center gap-2 text-sm text-zinc-400">
