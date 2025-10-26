@@ -622,38 +622,36 @@ fn get_file_diff(path: String, commit_hash: String, file_path: String) -> Result
     let mut diff_output = String::new();
     let mut file_found = false;
 
-    diff.print(git2::DiffFormat::Patch, |_delta, _hunk, line| {
+    diff.print(git2::DiffFormat::Patch, |delta, _hunk, line| {
         // Get the origin of the line (context, addition, deletion, etc.)
         let origin = line.origin();
         let content = std::str::from_utf8(line.content()).unwrap_or("");
 
         // Check if this line belongs to our file
-        if let Some(delta) = _delta {
-            let delta_path = delta.new_file()
-                .path()
-                .unwrap_or_else(|| delta.old_file().path().unwrap_or(std::path::Path::new("")));
+        let delta_path = delta.new_file()
+            .path()
+            .unwrap_or_else(|| delta.old_file().path().unwrap_or(std::path::Path::new("")));
+        
+        if delta_path == file_path_std {
+            file_found = true;
             
-            if delta_path == file_path_std {
-                file_found = true;
-                
-                // Add the line with its origin marker
-                match origin {
-                    '+' | '-' | ' ' => {
-                        diff_output.push(origin);
-                        diff_output.push_str(content);
-                    }
-                    'H' => {
-                        // Header line (like diff --git)
-                        diff_output.push_str(content);
-                    }
-                    'F' => {
-                        // File header (like +++ or ---)
-                        diff_output.push_str(content);
-                    }
-                    _ => {
-                        // Other lines (like @@ hunk headers)
-                        diff_output.push_str(content);
-                    }
+            // Add the line with its origin marker
+            match origin {
+                '+' | '-' | ' ' => {
+                    diff_output.push(origin);
+                    diff_output.push_str(content);
+                }
+                'H' => {
+                    // Header line (like diff --git)
+                    diff_output.push_str(content);
+                }
+                'F' => {
+                    // File header (like +++ or ---)
+                    diff_output.push_str(content);
+                }
+                _ => {
+                    // Other lines (like @@ hunk headers)
+                    diff_output.push_str(content);
                 }
             }
         }
