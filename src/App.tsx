@@ -140,65 +140,67 @@ function CommitDetailsPanel({
   const date = new Date(commit.timestamp * 1000);
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-zinc-900">
-      {/* Details Header */}
-      <div className="border-b border-zinc-800 p-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-semibold text-zinc-100 mb-2 line-clamp-2">
-              {commit.message.split('\n')[0]}
-            </h3>
-            <div className="space-y-1 text-xs text-zinc-400">
-              <div className="font-mono">{commit.hash}</div>
-              <div>{commit.author_name} ({commit.author_email})</div>
-              <div>{formatDate(commit.timestamp)}</div>
+    <div className="h-full flex flex-col overflow-hidden bg-zinc-900">
+      {/* Scrollable Content Container */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
+        {/* Details Header */}
+        <div className="border-b border-zinc-800 p-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-semibold text-zinc-100 mb-2 line-clamp-2">
+                {commit.message.split('\n')[0]}
+              </h3>
+              <div className="space-y-1 text-xs text-zinc-400">
+                <div className="font-mono">{commit.hash}</div>
+                <div>{commit.author_name} ({commit.author_email})</div>
+                <div>{formatDate(commit.timestamp)}</div>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="flex-shrink-0 text-zinc-400 hover:text-zinc-200 transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        {/* Full Message */}
+        {commit.message.split('\n').length > 1 && (
+          <div className="border-b border-zinc-800 p-4">
+            <p className="text-xs text-zinc-300 whitespace-pre-wrap font-mono bg-zinc-950 p-2 rounded border border-zinc-800">
+              {commit.message}
+            </p>
+          </div>
+        )}
+
+        {/* Tags Section */}
+        {commit.tags && commit.tags.length > 0 && (
+          <div className="border-b border-zinc-800 p-4">
+            <h4 className="text-xs font-semibold text-zinc-300 mb-2 uppercase tracking-wider">
+              Tags ({commit.tags.length})
+            </h4>
+            <div className="flex flex-wrap gap-2">
+              {commit.tags.map((tag) => (
+                <div
+                  key={tag.name}
+                  className={`px-2 py-1 rounded text-xs font-mono flex items-center gap-1 ${
+                    tag.is_remote
+                      ? 'bg-cyan-500 bg-opacity-20 border border-cyan-600 text-cyan-300'
+                      : 'bg-amber-500 bg-opacity-20 border border-amber-600 text-amber-300'
+                  }`}
+                >
+                  <span className="text-xs">🏷️</span>
+                  <span>{tag.name.split('/').pop()}</span>
+                  {tag.is_annotated && <span className="text-xs opacity-60">†</span>}
+                </div>
+              ))}
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="flex-shrink-0 text-zinc-400 hover:text-zinc-200 transition-colors"
-          >
-            ✕
-          </button>
-        </div>
-      </div>
+        )}
 
-      {/* Full Message */}
-      {commit.message.split('\n').length > 1 && (
-        <div className="border-b border-zinc-800 p-4">
-          <p className="text-xs text-zinc-300 whitespace-pre-wrap font-mono bg-zinc-950 p-2 rounded border border-zinc-800">
-            {commit.message}
-          </p>
-        </div>
-      )}
-
-      {/* Tags Section */}
-      {commit.tags && commit.tags.length > 0 && (
-        <div className="border-b border-zinc-800 p-4">
-          <h4 className="text-xs font-semibold text-zinc-300 mb-2 uppercase tracking-wider">
-            Tags ({commit.tags.length})
-          </h4>
-          <div className="flex flex-wrap gap-2">
-            {commit.tags.map((tag) => (
-              <div
-                key={tag.name}
-                className={`px-2 py-1 rounded text-xs font-mono flex items-center gap-1 ${
-                  tag.is_remote
-                    ? 'bg-cyan-500 bg-opacity-20 border border-cyan-600 text-cyan-300'
-                    : 'bg-amber-500 bg-opacity-20 border border-amber-600 text-amber-300'
-                }`}
-              >
-                <span className="text-xs">🏷️</span>
-                <span>{tag.name.split('/').pop()}</span>
-                {tag.is_annotated && <span className="text-xs opacity-60">†</span>}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Files List */}
-      <div className="flex-1 overflow-auto p-4">
+        {/* Files List and Diff Section */}
+        <div className="p-4">
         <h4 className="text-xs font-semibold text-zinc-300 mb-3 uppercase tracking-wider">
           Files Changed ({files.length})
         </h4>
@@ -260,10 +262,11 @@ function CommitDetailsPanel({
             />
           </div>
         )}
+        </div>
       </div>
 
-      {/* Summary Footer */}
-      <div className="border-t border-zinc-800 p-3 bg-zinc-950 text-xs text-zinc-400">
+      {/* Summary Footer - Fixed at bottom */}
+      <div className="flex-shrink-0 border-t border-zinc-800 p-3 bg-zinc-950 text-xs text-zinc-400">
         <div className="flex items-center justify-between">
           <span>{files.length} files changed</span>
           <span>{commit.parent_hashes.length} parent(s)</span>
