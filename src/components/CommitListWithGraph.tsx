@@ -20,6 +20,30 @@ export const CommitListWithGraph: React.FC<CommitListWithGraphProps> = ({
 
   const itemHeight = 104;
 
+  // Auto-scroll to selected commit when it changes
+  useEffect(() => {
+    if (!selectedCommit || !listScrollRef.current || !graphScrollRef.current) return;
+
+    // Find the index of the selected commit
+    const selectedIndex = commits.findIndex(c => c.hash === selectedCommit.hash);
+    if (selectedIndex === -1) return;
+
+    // Calculate the scroll position to center the selected commit
+    const containerHeight = listScrollRef.current.clientHeight;
+    const targetScrollTop = selectedIndex * itemHeight - (containerHeight / 2) + (itemHeight / 2);
+    const clampedScrollTop = Math.max(0, Math.min(targetScrollTop, commits.length * itemHeight - containerHeight));
+
+    // Smooth scroll both containers
+    listScrollRef.current.scrollTo({
+      top: clampedScrollTop,
+      behavior: 'smooth'
+    });
+    graphScrollRef.current.scrollTo({
+      top: clampedScrollTop,
+      behavior: 'smooth'
+    });
+  }, [selectedCommit, commits]);
+
   // Handle scroll sync between graph and list
   useEffect(() => {
     const graphContainer = graphScrollRef.current;
@@ -122,15 +146,15 @@ export const CommitListWithGraph: React.FC<CommitListWithGraphProps> = ({
                 onClick={() => onSelectCommit(commit)}
                 className={`bg-zinc-900 border rounded-lg p-4 transition-all duration-200 cursor-pointer ${
                   isSelected
-                    ? 'border-graft-500 bg-zinc-800'
+                    ? 'border-graft-500 bg-zinc-800 ring-2 ring-graft-500/50 shadow-lg shadow-graft-500/20'
                     : 'border-zinc-800 hover:border-zinc-700'
                 }`}
               >
                 <div className="flex items-start gap-4">
                   <div className="flex-shrink-0 w-8 flex items-center justify-center">
                     <div
-                      className={`w-3 h-3 rounded-full ${
-                        isSelected ? 'bg-graft-400' : 'bg-graft-500'
+                      className={`w-3 h-3 rounded-full transition-all ${
+                        isSelected ? 'bg-graft-400 scale-125' : 'bg-graft-500'
                       }`}
                     ></div>
                   </div>

@@ -93,17 +93,30 @@ export const CommitGraph: React.FC<CommitGraphProps> = React.memo(({
           onClick={() => handleSelectCommit(commit)}
           style={{ cursor: 'pointer' }}
         >
-          {/* Outer glow for selected */}
+          {/* Outer glow for selected - enhanced */}
           {isSelected && (
-            <circle
-              cx={node.x + 10}
-              cy={node.y + 40}
-              r="9"
-              fill="none"
-              stroke={color}
-              strokeWidth="1"
-              opacity="0.3"
-            />
+            <>
+              {/* Outer ring */}
+              <circle
+                cx={node.x + 10}
+                cy={node.y + 40}
+                r="12"
+                fill="none"
+                stroke={color}
+                strokeWidth="2"
+                opacity="0.5"
+              />
+              {/* Inner glow */}
+              <circle
+                cx={node.x + 10}
+                cy={node.y + 40}
+                r="9"
+                fill="none"
+                stroke={color}
+                strokeWidth="1"
+                opacity="0.3"
+              />
+            </>
           )}
 
           {/* Merge commit indicator (square background) */}
