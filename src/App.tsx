@@ -6,6 +6,7 @@ import { CommitListWithGraph } from "./components/CommitListWithGraph";
 import { GraphLegend } from "./components/GraphLegend";
 import { GraphStats } from "./components/GraphStats";
 import { StagingArea } from "./components/staging/StagingArea";
+import { DiffViewer } from "./components/DiffViewer";
 
 interface RepoInfo {
   name: string;
@@ -101,12 +102,14 @@ function CommitDetailsPanel({
   const [files, setFiles] = useState<FileChange[]>([]);
   const [loadingFiles, setLoadingFiles] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
 
   // Load files when commit is selected
   useEffect(() => {
     if (commit) {
       setLoadingFiles(true);
       setFileError(null);
+      setSelectedFile(null); // Reset selected file when commit changes
       
       invoke<FileChange[]>("get_commit_files", {
         path: repoPath,
@@ -222,10 +225,16 @@ function CommitDetailsPanel({
           <div className="space-y-1">
             {files.map((file, idx) => {
               const statusInfo = getStatusIcon(file.status);
+              const isSelected = selectedFile === file.path;
               return (
                 <div
                   key={idx}
-                  className="p-2 rounded hover:bg-zinc-800 transition-colors text-xs font-mono"
+                  onClick={() => setSelectedFile(file.path)}
+                  className={`p-2 rounded transition-colors text-xs font-mono cursor-pointer ${
+                    isSelected
+                      ? 'bg-cyan-900 bg-opacity-30 border border-cyan-700'
+                      : 'hover:bg-zinc-800 border border-transparent'
+                  }`}
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <span className={statusInfo.color}>{statusInfo.icon}</span>
@@ -237,6 +246,18 @@ function CommitDetailsPanel({
                 </div>
               );
             })}
+          </div>
+        )}
+        
+        {/* Diff Viewer - Show when a file is selected */}
+        {selectedFile && commit && (
+          <div className="mt-4">
+            <DiffViewer
+              repoPath={repoPath}
+              commitHash={commit.hash}
+              filePath={selectedFile}
+              fileName={selectedFile.split('/').pop() || selectedFile}
+            />
           </div>
         )}
       </div>

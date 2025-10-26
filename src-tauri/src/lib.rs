@@ -580,6 +580,94 @@ fn create_commit(path: String, message: String) -> Result<CommitResult, String> 
     })
 }
 
+#[tauri::command]
+fn get_file_diff(path: String, commit_hash: String, file_path: String) -> Result<String, String> {
+    // Open the repository
+    let repo = Repository::open(&path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    // Parse the commit hash
+    let oid = git2::Oid::from_str(&commit_hash)
+        .map_err(|e| format!("Invalid commit hash: {}", e))?;
+
+    // Get the commit
+    let commit = repo.find_commit(oid)
+        .map_err(|e| format!("Failed to find commit: {}", e))?;
+
+    // Get the commit tree
+    let commit_tree = commit.tree()
+        .map_err(|e| format!("Failed to get commit tree: {}", e))?;
+
+    // Get the parent tree (or None if no parent)
+    let parent_tree = if commit.parent_count() > 0 {
+        commit.parent(0)
+            .ok()
+            .and_then(|p| p.tree().ok())
+    } else {
+        None
+    };
+
+    // Create diff between parent and current commit
+    let diff = if let Some(parent_tree) = parent_tree {
+        repo.diff_tree_to_tree(Some(&parent_tree), Some(&commit_tree), None)
+            .map_err(|e| format!("Failed to create diff: {}", e))?
+    } else {
+        // First commit - diff against empty tree
+        repo.diff_tree_to_tree(None, Some(&commit_tree), None)
+            .map_err(|e| format!("Failed to create diff: {}", e))?
+    };
+
+    // Find the specific file in the diff
+    let file_path_std = std::path::Path::new(&file_path);
+    let mut diff_output = String::new();
+    let mut file_found = false;
+
+    diff.print(git2::DiffFormat::Patch, |_delta, _hunk, line| {
+        // Get the origin of the line (context, addition, deletion, etc.)
+        let origin = line.origin();
+        let content = std::str::from_utf8(line.content()).unwrap_or("");
+
+        // Check if this line belongs to our file
+        if let Some(delta) = _delta {
+            let delta_path = delta.new_file()
+                .path()
+                .unwrap_or_else(|| delta.old_file().path().unwrap_or(std::path::Path::new("")));
+            
+            if delta_path == file_path_std {
+                file_found = true;
+                
+                // Add the line with its origin marker
+                match origin {
+                    '+' | '-' | ' ' => {
+                        diff_output.push(origin);
+                        diff_output.push_str(content);
+                    }
+                    'H' => {
+                        // Header line (like diff --git)
+                        diff_output.push_str(content);
+                    }
+                    'F' => {
+                        // File header (like +++ or ---)
+                        diff_output.push_str(content);
+                    }
+                    _ => {
+                        // Other lines (like @@ hunk headers)
+                        diff_output.push_str(content);
+                    }
+                }
+            }
+        }
+
+        true
+    }).map_err(|e| format!("Failed to print diff: {}", e))?;
+
+    if !file_found {
+        return Err(format!("File not found in commit: {}", file_path));
+    }
+
+    Ok(diff_output)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -593,7 +681,8 @@ pub fn run() {
             get_working_directory_status,
             stage_files,
             unstage_files,
-            create_commit
+            create_commit,
+            get_file_diff
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
