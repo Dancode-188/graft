@@ -666,6 +666,44 @@ fn get_file_diff(path: String, commit_hash: String, file_path: String) -> Result
     Ok(diff_output)
 }
 
+/// Get the content of a file at a specific commit (for split diff view)
+#[tauri::command]
+fn get_file_content(
+    path: String,
+    commit_hash: String,
+    file_path: String,
+) -> Result<String, String> {
+    // Open the repository
+    let repo = Repository::open(&path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    // Parse the commit hash
+    let oid = git2::Oid::from_str(&commit_hash)
+        .map_err(|e| format!("Invalid commit hash: {}", e))?;
+
+    // Get the commit
+    let commit = repo.find_commit(oid)
+        .map_err(|e| format!("Failed to find commit: {}", e))?;
+
+    // Get the tree for this commit
+    let tree = commit.tree()
+        .map_err(|e| format!("Failed to get commit tree: {}", e))?;
+
+    // Find the file in the tree
+    let tree_entry = tree.get_path(std::path::Path::new(&file_path))
+        .map_err(|e| format!("File not found in commit: {}", e))?;
+
+    // Get the blob (file content)
+    let blob = repo.find_blob(tree_entry.id())
+        .map_err(|e| format!("Failed to read file content: {}", e))?;
+
+    // Convert blob content to string
+    let content = std::str::from_utf8(blob.content())
+        .map_err(|e| format!("File is not valid UTF-8: {}", e))?;
+
+    Ok(content.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -680,7 +718,8 @@ pub fn run() {
             stage_files,
             unstage_files,
             create_commit,
-            get_file_diff
+            get_file_diff,
+            get_file_content
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

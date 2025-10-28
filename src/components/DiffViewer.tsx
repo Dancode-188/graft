@@ -9,11 +9,13 @@ interface DiffViewerProps {
   fileName: string;
 }
 
+type ViewMode = 'monaco' | 'basic';
+
 export function DiffViewer({ repoPath, commitHash, filePath, fileName }: DiffViewerProps) {
   const [diff, setDiff] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [useMonaco, setUseMonaco] = useState(true);
+  const [viewMode, setViewMode] = useState<ViewMode>('monaco');
   const editorRef = useRef<any>(null);
 
   useEffect(() => {
@@ -121,21 +123,22 @@ export function DiffViewer({ repoPath, commitHash, filePath, fileName }: DiffVie
               <span className="text-red-400">-{deletions}</span>
             </div>
             <button
-              onClick={() => setUseMonaco(!useMonaco)}
-              className="text-xs px-2 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors"
-              title={useMonaco ? "Switch to basic view" : "Switch to Monaco editor"}
+              onClick={() => setViewMode(viewMode === 'monaco' ? 'basic' : 'monaco')}
+              className="text-xs px-3 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors font-medium"
+              title={viewMode === 'monaco' ? "Switch to basic view" : "Switch to Monaco editor"}
             >
-              {useMonaco ? '📝 Basic' : '✨ Monaco'}
+              {viewMode === 'monaco' ? '📝 Basic' : '✨ Monaco'}
             </button>
           </div>
         </div>
       </div>
 
       {/* Diff Content */}
-      {useMonaco ? (
+      {viewMode === 'monaco' ? (
         <div className="h-[600px]">
           <Editor
             height="100%"
+            width="100%"
             language={language}
             value={diff}
             theme="vs-dark"
@@ -176,7 +179,6 @@ export function DiffViewer({ repoPath, commitHash, filePath, fileName }: DiffVie
                 const lineNumber = index + 1;
                 
                 if (line.startsWith('+') && !line.startsWith('+++')) {
-                  // Addition line - green background
                   decorations.push({
                     range: new monaco.Range(lineNumber, 1, lineNumber, 1),
                     options: {
@@ -186,7 +188,6 @@ export function DiffViewer({ repoPath, commitHash, filePath, fileName }: DiffVie
                     },
                   });
                 } else if (line.startsWith('-') && !line.startsWith('---')) {
-                  // Deletion line - red background
                   decorations.push({
                     range: new monaco.Range(lineNumber, 1, lineNumber, 1),
                     options: {
@@ -196,7 +197,6 @@ export function DiffViewer({ repoPath, commitHash, filePath, fileName }: DiffVie
                     },
                   });
                 } else if (line.startsWith('@@')) {
-                  // Hunk header - cyan background
                   decorations.push({
                     range: new monaco.Range(lineNumber, 1, lineNumber, 1),
                     options: {
@@ -206,7 +206,6 @@ export function DiffViewer({ repoPath, commitHash, filePath, fileName }: DiffVie
                   });
                 } else if (line.startsWith('diff --git') || line.startsWith('index ') || 
                            line.startsWith('---') || line.startsWith('+++')) {
-                  // File header lines - gray background
                   decorations.push({
                     range: new monaco.Range(lineNumber, 1, lineNumber, 1),
                     options: {
