@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import { CommitGraph } from "./components/CommitGraph";
 import { CommitListWithGraph } from "./components/CommitListWithGraph";
 import { GraphLegend } from "./components/GraphLegend";
 import { GraphStats } from "./components/GraphStats";
@@ -42,29 +41,6 @@ interface FileChange {
   status: string;
   insertions: number;
   deletions: number;
-}
-
-// Helper function to format time ago
-function getTimeAgo(date: Date): string {
-  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
-  
-  const intervals = {
-    year: 31536000,
-    month: 2592000,
-    week: 604800,
-    day: 86400,
-    hour: 3600,
-    minute: 60,
-  };
-
-  for (const [unit, secondsInUnit] of Object.entries(intervals)) {
-    const interval = Math.floor(seconds / secondsInUnit);
-    if (interval >= 1) {
-      return `${interval} ${unit}${interval === 1 ? '' : 's'} ago`;
-    }
-  }
-
-  return 'just now';
 }
 
 // Format date to readable string
@@ -138,8 +114,6 @@ function CommitDetailsPanel({
       </div>
     );
   }
-
-  const date = new Date(commit.timestamp * 1000);
 
   return (
     <div className="h-full flex flex-col overflow-hidden bg-zinc-900">
@@ -402,11 +376,22 @@ function App() {
   const [showLegend, setShowLegend] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [rightPanelTab, setRightPanelTab] = useState<'details' | 'staging'>('staging');
-  const [showBranchSidebar, setShowBranchSidebar] = useState(true); // Branch sidebar visible by default
+  
+  // Branch sidebar collapsed by default, with localStorage persistence
+  const [showBranchSidebar, setShowBranchSidebar] = useState(() => {
+    const saved = localStorage.getItem('graft-show-branch-sidebar');
+    return saved ? JSON.parse(saved) : false; // Default: collapsed
+  });
+  
   const [branchModalOpen, setBranchModalOpen] = useState(false);
   const [branchModalMode, setBranchModalMode] = useState<'create' | 'rename' | 'delete'>('create');
   const [selectedBranch, setSelectedBranch] = useState<string | undefined>(undefined);
   const listContainerRef = useRef<HTMLDivElement>(null);
+
+  // Save branch sidebar state to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('graft-show-branch-sidebar', JSON.stringify(showBranchSidebar));
+  }, [showBranchSidebar]);
 
   // Detect OS for keyboard shortcut display
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
@@ -587,6 +572,21 @@ function App() {
             <span className="text-graft-500">Graft</span>
           </h1>
           <span className="text-xs text-zinc-500 font-mono">v0.4.0</span>
+          
+          {/* Branch Sidebar Toggle Button (only show when repo is open) */}
+          {repoInfo && (
+            <button
+              onClick={() => setShowBranchSidebar(!showBranchSidebar)}
+              className={`ml-2 px-3 py-1.5 text-xs rounded transition-all ${
+                showBranchSidebar
+                  ? 'bg-graft-600/20 text-graft-400 border border-graft-600/30'
+                  : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:border-zinc-600 hover:text-zinc-300'
+              }`}
+              title={`${showBranchSidebar ? 'Hide' : 'Show'} Branches (${shortcutKey}+B)`}
+            >
+              🌿 Branches
+            </button>
+          )}
         </div>
         {repoInfo && (
           <div className="flex items-center gap-2 text-sm text-zinc-400">
@@ -633,13 +633,15 @@ function App() {
           </div>
         ) : (
           <>
-            {/* Branch Sidebar */}
+            {/* Branch Sidebar with smooth transition */}
             {showBranchSidebar && (
-              <BranchSidebar
-                repoPath={repoInfo.path}
-                onRefresh={handleBranchChange}
-                onBranchAction={handleBranchAction}
-              />
+              <div className="animate-slide-in-left">
+                <BranchSidebar
+                  repoPath={repoInfo.path}
+                  onRefresh={handleBranchChange}
+                  onBranchAction={handleBranchAction}
+                />
+              </div>
             )}
 
             {/* Center Panel - Commit List */}
@@ -736,11 +738,10 @@ function App() {
               )}
             </div>
           </div>
-        )}
 
         {/* Right Panel with Tabs */}
         {repoInfo && (
-          <div className="w-96 border-l border-zinc-800 bg-zinc-900 flex flex-col">
+          <div className="w-80 border-l border-zinc-800 bg-zinc-900 flex flex-col">
             {/* Tab Header */}
             <div className="border-b border-zinc-800 flex">
               <button

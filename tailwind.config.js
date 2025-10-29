@@ -21,6 +21,9 @@ export default {
           900: '#14532d',
         },
       },
+      spacing: {
+        '45': '11.25rem', // 180px - Custom width for branch sidebar
+      },
     },
   },
   plugins: [],

@@ -142,16 +142,16 @@ export function BranchSidebar({ repoPath, onRefresh, onBranchAction }: BranchSid
 
   if (loading && branches.length === 0) {
     return (
-      <div className="w-60 border-r border-zinc-800 bg-zinc-900 flex items-center justify-center">
-        <div className="text-zinc-500 text-sm">Loading branches...</div>
+      <div className="w-45 border-r border-zinc-800 bg-zinc-900 flex items-center justify-center">
+        <div className="text-zinc-500 text-xs">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="w-60 border-r border-zinc-800 bg-zinc-900 flex flex-col relative">
+    <div className="w-45 border-r border-zinc-800 bg-zinc-900 flex flex-col relative">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-zinc-800">
+      <div className="px-3 py-3 border-b border-zinc-800">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-zinc-300">🌿 Branches</h2>
           <button
@@ -167,10 +167,10 @@ export function BranchSidebar({ repoPath, onRefresh, onBranchAction }: BranchSid
         {/* Search Input */}
         <input
           type="text"
-          placeholder="Search branches..."
+          placeholder="Search..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full px-3 py-1.5 text-sm bg-zinc-800 border border-zinc-700 rounded focus:outline-none focus:ring-1 focus:ring-graft-500 focus:border-graft-500 text-zinc-200 placeholder-zinc-500"
+          className="w-full px-2 py-1.5 text-xs bg-zinc-800 border border-zinc-700 rounded focus:outline-none focus:ring-1 focus:ring-graft-500 focus:border-graft-500 text-zinc-200 placeholder-zinc-500"
         />
       </div>
 
@@ -198,7 +198,8 @@ export function BranchSidebar({ repoPath, onRefresh, onBranchAction }: BranchSid
                 key={branch.full_name}
                 onClick={() => handleBranchClick(branch)}
                 onContextMenu={(e) => handleContextMenu(e, branch)}
-                className={`w-full px-4 py-2.5 text-left hover:bg-zinc-800 transition-colors border-l-2 ${
+                title={`${branch.commit_message}\n${formatDate(branch.last_commit_date)}`}
+                className={`w-full px-3 py-2 text-left hover:bg-zinc-800 transition-colors border-l-2 ${
                   branch.is_current
                     ? 'border-graft-500 bg-zinc-800/50'
                     : selectedBranch === branch.name
@@ -206,28 +207,15 @@ export function BranchSidebar({ repoPath, onRefresh, onBranchAction }: BranchSid
                     : 'border-transparent'
                 }`}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-base">
-                      {branch.is_current ? '★' : '🌿'}
-                    </span>
-                    <span className={`text-sm truncate ${
-                      branch.is_current ? 'text-graft-400 font-semibold' : 'text-zinc-300'
-                    }`}>
-                      {branch.name}
-                    </span>
-                  </div>
-                  {branch.is_current && (
-                    <span className="text-xs text-graft-500 font-medium shrink-0">
-                      *
-                    </span>
-                  )}
-                </div>
-                <div className="mt-1 text-xs text-zinc-500 truncate">
-                  {branch.commit_message || 'No commit message'}
-                </div>
-                <div className="mt-0.5 text-xs text-zinc-600">
-                  {formatDate(branch.last_commit_date)}
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-sm">
+                    {branch.is_current ? '★' : '🌿'}
+                  </span>
+                  <span className={`text-xs truncate ${
+                    branch.is_current ? 'text-graft-400 font-semibold' : 'text-zinc-300'
+                  }`}>
+                    {branch.name}
+                  </span>
                 </div>
               </button>
             ))
@@ -255,19 +243,14 @@ export function BranchSidebar({ repoPath, onRefresh, onBranchAction }: BranchSid
                   <button
                     key={branch.full_name}
                     onClick={() => handleBranchClick(branch)}
-                    className="w-full px-4 py-2.5 text-left hover:bg-zinc-800 transition-colors border-l-2 border-transparent"
+                    title={`${branch.commit_message}\n${formatDate(branch.last_commit_date)}`}
+                    className="w-full px-3 py-2 text-left hover:bg-zinc-800 transition-colors border-l-2 border-transparent"
                   >
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-base">🌐</span>
-                      <span className="text-sm text-zinc-400 truncate">
+                      <span className="text-sm">🌐</span>
+                      <span className="text-xs text-zinc-400 truncate">
                         {branch.name.replace('origin/', '')}
                       </span>
-                    </div>
-                    <div className="mt-1 text-xs text-zinc-600 truncate">
-                      {branch.commit_message || 'No commit message'}
-                    </div>
-                    <div className="mt-0.5 text-xs text-zinc-700">
-                      {formatDate(branch.last_commit_date)}
                     </div>
                   </button>
                 ))
@@ -278,10 +261,10 @@ export function BranchSidebar({ repoPath, onRefresh, onBranchAction }: BranchSid
       </div>
 
       {/* Footer Actions */}
-      <div className="px-4 py-3 border-t border-zinc-800 bg-zinc-950">
+      <div className="px-3 py-3 border-t border-zinc-800 bg-zinc-950">
         <button
           onClick={() => onBranchAction?.('create')}
-          className="w-full px-3 py-2 text-sm bg-graft-600 hover:bg-graft-500 active:bg-graft-700 text-white rounded font-medium transition-colors"
+          className="w-full px-3 py-2 text-xs bg-graft-600 hover:bg-graft-500 active:bg-graft-700 text-white rounded font-medium transition-colors"
           title="Create new branch (Cmd+N)"
         >
           + New Branch
