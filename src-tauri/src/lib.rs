@@ -704,6 +704,300 @@ fn get_file_content(
     Ok(content.to_string())
 }
 
+// Branch management structures
+#[derive(Debug, Serialize, Clone)]
+struct Branch {
+    name: String,
+    full_name: String,
+    is_remote: bool,
+    is_current: bool,
+    commit_hash: String,
+    commit_message: String,
+    last_commit_date: i64,
+    upstream: Option<String>,
+}
+
+/// Get all branches (local and remote) with metadata
+#[tauri::command]
+fn get_branches(path: String) -> Result<Vec<Branch>, String> {
+    // Open the repository
+    let repo = Repository::open(&path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    let mut branches = Vec::new();
+
+    // Get the current branch (if any)
+    let head_ref = repo.head().ok();
+    let current_branch_name = head_ref
+        .as_ref()
+        .and_then(|h| h.shorthand())
+        .map(|s| s.to_string());
+
+    // Iterate through all branches (local and remote)
+    let branch_iter = repo.branches(None)
+        .map_err(|e| format!("Failed to iterate branches: {}", e))?;
+
+    for branch_result in branch_iter {
+        let (branch, branch_type) = branch_result
+            .map_err(|e| format!("Failed to get branch: {}", e))?;
+
+        // Get branch name
+        let name = branch.name()
+            .map_err(|e| format!("Failed to get branch name: {}", e))?
+            .unwrap_or("unknown")
+            .to_string();
+
+        let is_remote = branch_type == git2::BranchType::Remote;
+        
+        // Determine if this is the current branch
+        let is_current = !is_remote && current_branch_name.as_ref().map_or(false, |cb| cb == &name);
+
+        // Get the full reference name
+        let reference = branch.get();
+        let full_name = reference.name()
+            .unwrap_or("unknown")
+            .to_string();
+
+        // Get the commit this branch points to
+        let commit = reference.peel_to_commit()
+            .map_err(|e| format!("Failed to get commit for branch {}: {}", name, e))?;
+
+        let commit_hash = commit.id().to_string();
+        let commit_message = commit.message()
+            .unwrap_or("(no message)")
+            .lines()
+            .next()
+            .unwrap_or("(no message)")
+            .to_string();
+        let last_commit_date = commit.time().seconds();
+
+        // Get upstream tracking info (for local branches)
+        let upstream = if !is_remote {
+            branch.upstream()
+                .ok()
+                .and_then(|upstream_branch| {
+                    upstream_branch.name()
+                        .ok()
+                        .flatten()
+                        .map(|s| s.to_string())
+                })
+        } else {
+            None
+        };
+
+        branches.push(Branch {
+            name,
+            full_name,
+            is_remote,
+            is_current,
+            commit_hash,
+            commit_message,
+            last_commit_date,
+            upstream,
+        });
+    }
+
+    // Sort branches: current first, then local, then remote
+    branches.sort_by(|a, b| {
+        if a.is_current != b.is_current {
+            b.is_current.cmp(&a.is_current)
+        } else if a.is_remote != b.is_remote {
+            a.is_remote.cmp(&b.is_remote)
+        } else {
+            a.name.cmp(&b.name)
+        }
+    });
+
+    Ok(branches)
+}
+
+/// Create a new branch
+#[tauri::command]
+fn create_branch(
+    path: String,
+    branch_name: String,
+    start_point: Option<String>,
+    checkout: bool,
+) -> Result<String, String> {
+    // Validate branch name
+    if branch_name.trim().is_empty() {
+        return Err("Branch name cannot be empty".to_string());
+    }
+
+    // Check for invalid characters in branch name
+    if branch_name.contains("..") || branch_name.starts_with('/') || branch_name.ends_with('/') {
+        return Err("Invalid branch name".to_string());
+    }
+
+    // Open the repository
+    let repo = Repository::open(&path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    // Check if branch already exists
+    if repo.find_branch(&branch_name, git2::BranchType::Local).is_ok() {
+        return Err(format!("Branch '{}' already exists", branch_name));
+    }
+
+    // Determine the starting commit
+    let commit = if let Some(start) = start_point {
+        // Try to parse as commit hash or resolve as reference
+        let obj = repo.revparse_single(&start)
+            .map_err(|e| format!("Failed to resolve start point '{}': {}", start, e))?;
+        obj.peel_to_commit()
+            .map_err(|e| format!("Start point '{}' is not a valid commit: {}", start, e))?
+    } else {
+        // Use HEAD
+        let head = repo.head()
+            .map_err(|e| format!("Failed to get HEAD: {}", e))?;
+        head.peel_to_commit()
+            .map_err(|e| format!("Failed to get HEAD commit: {}", e))?
+    };
+
+    // Create the branch
+    repo.branch(&branch_name, &commit, false)
+        .map_err(|e| format!("Failed to create branch: {}", e))?;
+
+    // Checkout if requested
+    if checkout {
+        let obj = repo.revparse_single(&format!("refs/heads/{}", branch_name))
+            .map_err(|e| format!("Failed to find new branch: {}", e))?;
+        
+        repo.checkout_tree(&obj, None)
+            .map_err(|e| format!("Failed to checkout branch: {}", e))?;
+        
+        repo.set_head(&format!("refs/heads/{}", branch_name))
+            .map_err(|e| format!("Failed to set HEAD: {}", e))?;
+    }
+
+    Ok(format!("Branch '{}' created successfully", branch_name))
+}
+
+/// Switch to a different branch
+#[tauri::command]
+fn switch_branch(path: String, branch_name: String) -> Result<String, String> {
+    // Open the repository
+    let repo = Repository::open(&path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    // Check for uncommitted changes
+    let statuses = repo.statuses(None)
+        .map_err(|e| format!("Failed to get repository status: {}", e))?;
+    
+    let has_changes = statuses.iter().any(|s| {
+        let status = s.status();
+        status.is_index_new() || status.is_index_modified() || status.is_index_deleted() ||
+        status.is_wt_new() || status.is_wt_modified() || status.is_wt_deleted()
+    });
+
+    if has_changes {
+        return Err("You have uncommitted changes. Please commit or stash them before switching branches.".to_string());
+    }
+
+    // Find the branch
+    let branch = repo.find_branch(&branch_name, git2::BranchType::Local)
+        .map_err(|e| format!("Branch '{}' not found: {}", branch_name, e))?;
+
+    // Get the reference
+    let reference = branch.get();
+    let obj = reference.peel(git2::ObjectType::Commit)
+        .map_err(|e| format!("Failed to get commit: {}", e))?;
+
+    // Checkout the branch
+    repo.checkout_tree(&obj, None)
+        .map_err(|e| format!("Failed to checkout branch: {}", e))?;
+
+    // Update HEAD
+    repo.set_head(&format!("refs/heads/{}", branch_name))
+        .map_err(|e| format!("Failed to update HEAD: {}", e))?;
+
+    Ok(format!("Switched to branch '{}'", branch_name))
+}
+
+/// Delete a branch
+#[tauri::command]
+fn delete_branch(path: String, branch_name: String, force: bool) -> Result<String, String> {
+    // Open the repository
+    let repo = Repository::open(&path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    // Check if trying to delete current branch
+    let head_ref = repo.head().ok();
+    let current_branch = head_ref
+        .as_ref()
+        .and_then(|h| h.shorthand())
+        .map(|s| s.to_string());
+
+    if current_branch.as_ref().map_or(false, |cb| cb == &branch_name) {
+        return Err("Cannot delete the current branch. Please switch to another branch first.".to_string());
+    }
+
+    // Find the branch
+    let mut branch = repo.find_branch(&branch_name, git2::BranchType::Local)
+        .map_err(|e| format!("Branch '{}' not found: {}", branch_name, e))?;
+
+    // Check if branch is merged (unless force is true)
+    if !force {
+        let branch_commit = branch.get()
+            .peel_to_commit()
+            .map_err(|e| format!("Failed to get branch commit: {}", e))?;
+        
+        let head_commit = repo.head()
+            .map_err(|e| format!("Failed to get HEAD: {}", e))?
+            .peel_to_commit()
+            .map_err(|e| format!("Failed to get HEAD commit: {}", e))?;
+
+        // Check if branch_commit is reachable from head_commit
+        let is_merged = repo.graph_descendant_of(head_commit.id(), branch_commit.id())
+            .map_err(|e| format!("Failed to check if branch is merged: {}", e))?;
+
+        if !is_merged {
+            return Err(format!(
+                "Branch '{}' is not fully merged. Use force delete if you're sure.",
+                branch_name
+            ));
+        }
+    }
+
+    // Delete the branch
+    branch.delete()
+        .map_err(|e| format!("Failed to delete branch: {}", e))?;
+
+    Ok(format!("Branch '{}' deleted successfully", branch_name))
+}
+
+/// Rename a branch
+#[tauri::command]
+fn rename_branch(path: String, old_name: String, new_name: String) -> Result<String, String> {
+    // Validate new branch name
+    if new_name.trim().is_empty() {
+        return Err("New branch name cannot be empty".to_string());
+    }
+
+    // Check for invalid characters
+    if new_name.contains("..") || new_name.starts_with('/') || new_name.ends_with('/') {
+        return Err("Invalid branch name".to_string());
+    }
+
+    // Open the repository
+    let repo = Repository::open(&path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    // Check if new name already exists
+    if repo.find_branch(&new_name, git2::BranchType::Local).is_ok() {
+        return Err(format!("Branch '{}' already exists", new_name));
+    }
+
+    // Find the branch to rename
+    let mut branch = repo.find_branch(&old_name, git2::BranchType::Local)
+        .map_err(|e| format!("Branch '{}' not found: {}", old_name, e))?;
+
+    // Rename the branch
+    branch.rename(&new_name, false)
+        .map_err(|e| format!("Failed to rename branch: {}", e))?;
+
+    Ok(format!("Branch '{}' renamed to '{}'", old_name, new_name))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -719,7 +1013,12 @@ pub fn run() {
             unstage_files,
             create_commit,
             get_file_diff,
-            get_file_content
+            get_file_content,
+            get_branches,
+            create_branch,
+            switch_branch,
+            delete_branch,
+            rename_branch
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

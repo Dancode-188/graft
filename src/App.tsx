@@ -7,6 +7,8 @@ import { GraphLegend } from "./components/GraphLegend";
 import { GraphStats } from "./components/GraphStats";
 import { StagingArea } from "./components/staging/StagingArea";
 import { DiffViewer } from "./components/DiffViewer";
+import { BranchSidebar } from "./components/BranchSidebar";
+import { BranchModal } from "./components/BranchModal";
 
 interface RepoInfo {
   name: string;
@@ -400,6 +402,10 @@ function App() {
   const [showLegend, setShowLegend] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [rightPanelTab, setRightPanelTab] = useState<'details' | 'staging'>('staging');
+  const [showBranchSidebar, setShowBranchSidebar] = useState(true); // Branch sidebar visible by default
+  const [branchModalOpen, setBranchModalOpen] = useState(false);
+  const [branchModalMode, setBranchModalMode] = useState<'create' | 'rename' | 'delete'>('create');
+  const [selectedBranch, setSelectedBranch] = useState<string | undefined>(undefined);
   const listContainerRef = useRef<HTMLDivElement>(null);
 
   // Detect OS for keyboard shortcut display
@@ -421,6 +427,23 @@ function App() {
       if ((e.metaKey || e.ctrlKey) && e.key === "f") {
         e.preventDefault();
         setSearchOpen(true);
+      }
+
+      // Cmd+B (Mac) or Ctrl+B (Windows/Linux) to toggle branch sidebar
+      if ((e.metaKey || e.ctrlKey) && e.key === "b") {
+        e.preventDefault();
+        if (repoInfo) {
+          setShowBranchSidebar((prev) => !prev);
+        }
+      }
+
+      // Cmd+N (Mac) or Ctrl+N (Windows/Linux) to create new branch
+      if ((e.metaKey || e.ctrlKey) && e.key === "n") {
+        e.preventDefault();
+        if (repoInfo) {
+          setBranchModalMode('create');
+          setBranchModalOpen(true);
+        }
       }
 
       // Escape to close search or deselect
@@ -526,6 +549,35 @@ function App() {
     }
   };
 
+  const handleBranchChange = async () => {
+    // Refresh commits and repo info after branch operations
+    if (repoInfo) {
+      try {
+        // Refresh repo info to get updated current branch
+        const info = await invoke<RepoInfo>("open_repository", {
+          path: repoInfo.path,
+        });
+        setRepoInfo(info);
+
+        // Refresh commit list
+        const commitList = await invoke<Commit[]>("get_commits", {
+          path: repoInfo.path,
+          limit: 1000,
+        });
+        setCommits(commitList);
+        setSelectedCommitIndex(-1);
+      } catch (err) {
+        console.error("Failed to refresh after branch change:", err);
+      }
+    }
+  };
+
+  const handleBranchAction = (action: 'create' | 'rename' | 'delete', branchName?: string) => {
+    setBranchModalMode(action);
+    setSelectedBranch(branchName);
+    setBranchModalOpen(true);
+  };
+
   return (
     <div className="flex flex-col h-screen bg-zinc-950 text-zinc-100">
       {/* Header */}
@@ -534,7 +586,7 @@ function App() {
           <h1 className="text-2xl font-bold tracking-tight">
             <span className="text-graft-500">Graft</span>
           </h1>
-          <span className="text-xs text-zinc-500 font-mono">v0.3.0</span>
+          <span className="text-xs text-zinc-500 font-mono">v0.4.0</span>
         </div>
         {repoInfo && (
           <div className="flex items-center gap-2 text-sm text-zinc-400">
@@ -580,7 +632,18 @@ function App() {
             </div>
           </div>
         ) : (
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <>
+            {/* Branch Sidebar */}
+            {showBranchSidebar && (
+              <BranchSidebar
+                repoPath={repoInfo.path}
+                onRefresh={handleBranchChange}
+                onBranchAction={handleBranchAction}
+              />
+            )}
+
+            {/* Center Panel - Commit List */}
+            <div className="flex-1 flex flex-col overflow-hidden">
             {/* Header Bar */}
             <div className="px-6 py-4 border-b border-zinc-800">
               <div className="flex items-center justify-between gap-4">
@@ -719,7 +782,21 @@ function App() {
             </div>
           </div>
         )}
+          </>
+        )}
       </main>
+
+      {/* Branch Modal */}
+      {repoInfo && (
+        <BranchModal
+          isOpen={branchModalOpen}
+          onClose={() => setBranchModalOpen(false)}
+          repoPath={repoInfo.path}
+          mode={branchModalMode}
+          currentBranch={selectedBranch}
+          onSuccess={handleBranchChange}
+        />
+      )}
 
       {/* Search Modal */}
       <SearchModal
@@ -732,7 +809,7 @@ function App() {
       {/* Status Bar */}
       <footer className="px-6 py-2 border-t border-zinc-800 bg-zinc-900 text-xs text-zinc-500 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <span>Phase 3: Staging & Commits ✏️</span>
+          <span>Phase 5: Branching 🔀 ✅</span>
           {commits.length > 0 && (
             <>
               <span className="text-zinc-600">│</span>
@@ -749,6 +826,9 @@ function App() {
         <div className="flex items-center gap-2 text-xs">
           <span className="font-mono">↑↓</span>
           <span className="text-zinc-600">Navigate</span>
+          <span className="text-zinc-600">│</span>
+          <span className="font-mono">{shortcutKey}+B</span>
+          <span className="text-zinc-600">Branches</span>
           <span className="text-zinc-600">│</span>
           <span className="font-mono">{shortcutKey}+F</span>
           <span className="text-zinc-600">Search</span>
