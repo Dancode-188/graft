@@ -125,6 +125,63 @@ struct CommitResult {
     message: String,
 }
 
+// ============================================================================
+// Phase 7: Interactive Rebase Data Structures
+// ============================================================================
+
+#[derive(Debug, Serialize, Clone)]
+struct RebaseCommit {
+    hash: String,
+    short_hash: String,
+    message: String,
+    author: String,
+    timestamp: i64,
+    action: String,  // "pick", "squash", "fixup", "drop", "reword", "edit"
+}
+
+#[derive(Debug, Deserialize, Clone)]
+struct RebaseInstruction {
+    hash: String,
+    action: String,  // "pick", "squash", "fixup", "drop", "reword", "edit"
+    new_message: Option<String>,  // Used for "reword" action
+}
+
+#[derive(Debug, Serialize)]
+struct RebasePlan {
+    total_commits: usize,
+    actions_summary: std::collections::HashMap<String, usize>,
+    warnings: Vec<String>,
+    can_proceed: bool,
+}
+
+#[derive(Debug, Serialize)]
+struct RebaseResult {
+    success: bool,
+    current_commit_index: usize,
+    total_commits: usize,
+    conflicts: Vec<ConflictFile>,
+    message: String,
+    rebase_state: String,  // "completed", "in_progress", "stopped_for_edit", "conflict"
+}
+
+#[derive(Debug, Serialize)]
+struct RebaseStatus {
+    is_in_progress: bool,
+    current_commit_index: usize,
+    total_commits: usize,
+    has_conflicts: bool,
+    conflicts: Vec<ConflictFile>,
+    onto_commit: String,
+    original_head: String,
+}
+
+#[derive(Debug, Serialize)]
+struct ValidationResult {
+    is_valid: bool,
+    errors: Vec<String>,
+    warnings: Vec<String>,
+}
+
 #[tauri::command]
 fn open_repository(path: String) -> Result<RepoInfo, String> {
     // Validate path exists
@@ -1587,6 +1644,99 @@ fn push_to_remote(
     }
 }
 
+// ============================================================================
+// Phase 7: Interactive Rebase Commands
+// ============================================================================
+
+/// Get the list of commits that would be included in an interactive rebase
+/// from the current HEAD back to (and excluding) the base_commit
+#[tauri::command]
+fn get_rebase_commits(
+    path: String,
+    base_commit: String,
+) -> Result<Vec<RebaseCommit>, String> {
+    // Open the repository
+    let repo = Repository::open(&path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    // Get the base commit object
+    let base_oid = git2::Oid::from_str(&base_commit)
+        .map_err(|e| format!("Invalid base commit hash: {}", e))?;
+    
+    // Get the base commit object (validate it exists)
+    let _base_commit_obj = repo.find_commit(base_oid)
+        .map_err(|e| format!("Failed to find base commit: {}", e))?;
+
+    // Get HEAD commit
+    let head = repo.head()
+        .map_err(|e| format!("Failed to get HEAD: {}", e))?;
+    let head_commit = head.peel_to_commit()
+        .map_err(|e| format!("Failed to get HEAD commit: {}", e))?;
+
+    // Check that base is an ancestor of HEAD
+    let is_ancestor = repo.graph_descendant_of(head_commit.id(), base_oid)
+        .map_err(|e| format!("Failed to check ancestry: {}", e))?;
+    
+    if !is_ancestor {
+        return Err(format!(
+            "Base commit {} is not an ancestor of HEAD. Cannot rebase.",
+            base_commit
+        ));
+    }
+
+    // Walk commits from HEAD back to (but not including) base
+    let mut revwalk = repo.revwalk()
+        .map_err(|e| format!("Failed to create revwalk: {}", e))?;
+    
+    // Push HEAD
+    revwalk.push_head()
+        .map_err(|e| format!("Failed to push HEAD to revwalk: {}", e))?;
+    
+    // Hide base commit (we don't want to include it)
+    revwalk.hide(base_oid)
+        .map_err(|e| format!("Failed to hide base commit: {}", e))?;
+
+    // Collect commits
+    let mut commits = Vec::new();
+    for oid in revwalk {
+        let oid = oid.map_err(|e| format!("Failed to get commit OID: {}", e))?;
+        let commit = repo.find_commit(oid)
+            .map_err(|e| format!("Failed to find commit: {}", e))?;
+
+        let hash = commit.id().to_string();
+        let short_hash = hash.chars().take(7).collect();
+        let message = commit.message()
+            .unwrap_or("<no message>")
+            .lines()
+            .next()
+            .unwrap_or("<no message>")
+            .to_string();
+        let author = commit.author().name()
+            .unwrap_or("<unknown>")
+            .to_string();
+        let timestamp = commit.time().seconds();
+
+        commits.push(RebaseCommit {
+            hash,
+            short_hash,
+            message,
+            author,
+            timestamp,
+            action: "pick".to_string(),  // Default action is "pick"
+        });
+    }
+
+    // Reverse to get chronological order (oldest first)
+    // This is the order they'll be applied in the rebase
+    commits.reverse();
+
+    if commits.is_empty() {
+        return Err("No commits to rebase. HEAD and base are the same.".to_string());
+    }
+
+    Ok(commits)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -1611,7 +1761,8 @@ pub fn run() {
             get_remote_status,
             fetch_from_remote,
             pull_from_remote,
-            push_to_remote
+            push_to_remote,
+            get_rebase_commits
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
