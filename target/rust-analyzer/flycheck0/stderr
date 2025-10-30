@@ -1,1 +1,5 @@
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.77s
+   2.477748700s  INFO prepare_target{force=false package_id=graft v0.3.0 (C:\Users\user\graft\src-tauri) target="graft"}: cargo::core::compiler::fingerprint: dependency on `graft_lib` is newer than we are 13406286461.604679300s > 13406286175.706380100s "C:\\Users\\user\\graft\\src-tauri"
+   2.479563200s  INFO prepare_target{force=false package_id=graft v0.3.0 (C:\Users\user\graft\src-tauri) target="graft"}: cargo::core::compiler::fingerprint: fingerprint dirty for graft v0.3.0 (C:\Users\user\graft\src-tauri)/Check { test: true }/TargetInner { name: "graft", doc: true, ..: with_path("C:\\Users\\user\\graft\\src-tauri\\src/main.rs", Edition2021) }
+   2.479925100s  INFO prepare_target{force=false package_id=graft v0.3.0 (C:\Users\user\graft\src-tauri) target="graft"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(StaleDependency { name: "graft_lib", dep_mtime: FileTime { seconds: 13406286461, nanos: 604679300 }, max_mtime: FileTime { seconds: 13406286175, nanos: 706380100 } })
+    Checking graft v0.3.0 (C:\Users\user\graft\src-tauri)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 21.77s

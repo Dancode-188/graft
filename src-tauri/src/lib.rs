@@ -1,5 +1,5 @@
 use git2::{Repository, Sort};
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use std::path::Path;
 
 #[derive(Debug, Serialize)]
@@ -68,6 +68,9 @@ struct RemoteStatus {
     up_to_date: bool,
 }
 
+// Note: FetchProgress is prepared for future real-time progress streaming
+// Currently using simpler FetchResult for completed operations
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Clone)]
 struct FetchProgress {
     stage: String,
@@ -83,6 +86,35 @@ struct FetchResult {
     success: bool,
     bytes_received: usize,
     objects_received: usize,
+    message: String,
+}
+
+#[derive(Debug, Serialize)]
+struct PushResult {
+    success: bool,
+    rejected: bool,
+    rejection_reason: String,
+    bytes_sent: usize,
+    message: String,
+}
+
+#[derive(Debug, Deserialize)]
+enum PullStrategy {
+    Merge,
+    Rebase,
+}
+
+#[derive(Debug, Serialize, Clone)]
+struct ConflictFile {
+    path: String,
+    conflict_type: String,
+}
+
+#[derive(Debug, Serialize)]
+struct PullResult {
+    success: bool,
+    conflicts: Vec<ConflictFile>,
+    commits_received: usize,
     message: String,
 }
 
@@ -1158,6 +1190,403 @@ fn fetch_from_remote(path: String, remote_name: String) -> Result<FetchResult, S
     })
 }
 
+#[tauri::command]
+fn pull_from_remote(
+    path: String,
+    remote_name: String,
+    strategy: PullStrategy,
+) -> Result<PullResult, String> {
+    use git2::{FetchOptions, RemoteCallbacks};
+
+    // Open the repository
+    let repo = Repository::open(&path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    // Check if working directory is clean
+    let statuses = repo.statuses(None)
+        .map_err(|e| format!("Failed to get repository status: {}", e))?;
+    
+    let has_changes = statuses.iter().any(|s| {
+        let status = s.status();
+        status.is_wt_modified() || status.is_wt_new() || status.is_wt_deleted()
+    });
+    
+    if has_changes {
+        return Err("Working directory has uncommitted changes. Commit or stash them before pulling.".to_string());
+    }
+
+    // Get current branch
+    let head = repo.head()
+        .map_err(|e| format!("Failed to get HEAD: {}", e))?;
+    let branch_name = head.shorthand()
+        .ok_or_else(|| "Failed to get branch name".to_string())?;
+
+    // Find the remote
+    let mut remote = repo.find_remote(&remote_name)
+        .map_err(|e| format!("Remote '{}' not found: {}", remote_name, e))?;
+
+    // Set up callbacks for authentication
+    let mut callbacks = RemoteCallbacks::new();
+    callbacks.credentials(|_url, username_from_url, _allowed_types| {
+        git2::Cred::ssh_key_from_agent(username_from_url.unwrap_or("git"))
+    });
+
+    // Set up fetch options
+    let mut fetch_options = FetchOptions::new();
+    fetch_options.remote_callbacks(callbacks);
+
+    // Fetch from remote
+    remote.fetch(&[branch_name], Some(&mut fetch_options), None)
+        .map_err(|e| format!("Failed to fetch from remote: {}", e))?;
+
+    // Get the fetch head
+    let fetch_head = repo.find_reference("FETCH_HEAD")
+        .map_err(|e| format!("Failed to find FETCH_HEAD: {}", e))?;
+    let fetch_commit = repo.reference_to_annotated_commit(&fetch_head)
+        .map_err(|e| format!("Failed to get fetch commit: {}", e))?;
+
+    // Get HEAD commit
+    let head_commit = repo.reference_to_annotated_commit(&head)
+        .map_err(|e| format!("Failed to get HEAD commit: {}", e))?;
+
+    // Perform merge analysis
+    let (merge_analysis, _merge_pref) = repo.merge_analysis(&[&fetch_commit])
+        .map_err(|e| format!("Failed to analyze merge: {}", e))?;
+
+    if merge_analysis.is_up_to_date() {
+        return Ok(PullResult {
+            success: true,
+            conflicts: vec![],
+            commits_received: 0,
+            message: "Already up to date".to_string(),
+        });
+    }
+
+    if merge_analysis.is_fast_forward() {
+        // Fast-forward merge
+        let refname = format!("refs/heads/{}", branch_name);
+        let mut reference = repo.find_reference(&refname)
+            .map_err(|e| format!("Failed to find branch reference: {}", e))?;
+        
+        reference.set_target(fetch_commit.id(), "Fast-forward merge")
+            .map_err(|e| format!("Failed to fast-forward: {}", e))?;
+        
+        repo.set_head(&refname)
+            .map_err(|e| format!("Failed to set HEAD: {}", e))?;
+        
+        repo.checkout_head(Some(git2::build::CheckoutBuilder::default().force()))
+            .map_err(|e| format!("Failed to checkout: {}", e))?;
+
+        return Ok(PullResult {
+            success: true,
+            conflicts: vec![],
+            commits_received: 1,
+            message: "Fast-forward merge completed".to_string(),
+        });
+    }
+
+    // Normal merge or rebase required
+    match strategy {
+        PullStrategy::Merge => {
+            perform_merge(&repo, &fetch_commit, branch_name)
+        }
+        PullStrategy::Rebase => {
+            perform_rebase(&repo, &fetch_commit, &head_commit)
+        }
+    }
+}
+
+fn perform_merge(
+    repo: &Repository,
+    fetch_commit: &git2::AnnotatedCommit,
+    branch_name: &str,
+) -> Result<PullResult, String> {
+    use git2::MergeOptions;
+
+    // Perform merge
+    let mut merge_options = MergeOptions::new();
+    repo.merge(&[fetch_commit], Some(&mut merge_options), None)
+        .map_err(|e| format!("Merge failed: {}", e))?;
+
+    // Check for conflicts
+    let mut index = repo.index()
+        .map_err(|e| format!("Failed to get index: {}", e))?;
+    
+    if index.has_conflicts() {
+        let conflicts = collect_conflicts(&index)?;
+        let conflict_count = conflicts.len();
+        return Ok(PullResult {
+            success: false,
+            conflicts,
+            commits_received: 0,
+            message: format!("Merge has {} conflict(s). Please resolve them manually.", conflict_count),
+        });
+    }
+
+    // Write the merge commit
+    let signature = repo.signature()
+        .map_err(|e| format!("Failed to get signature: {}", e))?;
+    
+    let parent_commit = repo.head()
+        .and_then(|h| h.peel_to_commit())
+        .map_err(|e| format!("Failed to get parent commit: {}", e))?;
+    
+    let fetch_parent = repo.find_commit(fetch_commit.id())
+        .map_err(|e| format!("Failed to find fetch commit: {}", e))?;
+    
+    let tree_id = index.write_tree()
+        .map_err(|e| format!("Failed to write tree: {}", e))?;
+    let tree = repo.find_tree(tree_id)
+        .map_err(|e| format!("Failed to find tree: {}", e))?;
+
+    let message = format!("Merge branch '{}' of remote", branch_name);
+    repo.commit(
+        Some("HEAD"),
+        &signature,
+        &signature,
+        &message,
+        &tree,
+        &[&parent_commit, &fetch_parent],
+    ).map_err(|e| format!("Failed to create merge commit: {}", e))?;
+
+    // Clean up merge state
+    repo.cleanup_state()
+        .map_err(|e| format!("Failed to cleanup state: {}", e))?;
+
+    Ok(PullResult {
+        success: true,
+        conflicts: vec![],
+        commits_received: 1,
+        message: "Merge completed successfully".to_string(),
+    })
+}
+
+fn perform_rebase(
+    repo: &Repository,
+    fetch_commit: &git2::AnnotatedCommit,
+    _head_commit: &git2::AnnotatedCommit,
+) -> Result<PullResult, String> {
+    use git2::RebaseOptions;
+
+    // Get the signature for rebase commits
+    let signature = repo.signature()
+        .map_err(|e| format!("Failed to get signature: {}", e))?;
+
+    // Initialize rebase options
+    let mut rebase_options = RebaseOptions::new();
+    
+    // Initialize the rebase operation
+    // Parameters: branch (None = HEAD), upstream, onto
+    let mut rebase = repo.rebase(
+        None,               // Rebase current HEAD
+        Some(fetch_commit), // Onto the fetched commit
+        None,               // No custom onto
+        Some(&mut rebase_options)
+    ).map_err(|e| format!("Failed to initialize rebase: {}", e))?;
+
+    // Track the number of commits applied
+    let mut commits_applied = 0;
+
+    // Apply each commit in the rebase
+    while let Some(op) = rebase.next() {
+        // Get the operation (this advances the iterator)
+        let _op = op.map_err(|e| format!("Failed to get rebase operation: {}", e))?;
+        
+        // Try to apply this commit
+        match rebase.commit(None, &signature, None) {
+            Ok(_) => {
+                commits_applied += 1;
+            }
+            Err(e) => {
+                // Check if we have conflicts
+                let index = repo.index()
+                    .map_err(|e| format!("Failed to get index: {}", e))?;
+                
+                if index.has_conflicts() {
+                    // Collect conflict information
+                    let conflicts = collect_conflicts(&index)?;
+                    let conflict_count = conflicts.len(); // Get count before moving
+                    
+                    // Abort the rebase to leave the repository in a clean state
+                    rebase.abort()
+                        .map_err(|e| format!("Failed to abort rebase after conflict: {}", e))?;
+                    
+                    return Ok(PullResult {
+                        success: false,
+                        conflicts,
+                        commits_received: 0,
+                        message: format!(
+                            "Rebase failed with {} conflict(s). The rebase has been aborted.",
+                            conflict_count
+                        ),
+                    });
+                } else {
+                    // Some other error occurred
+                    rebase.abort()
+                        .map_err(|e| format!("Failed to abort rebase: {}", e))?;
+                    return Err(format!("Failed to apply commit during rebase: {}", e));
+                }
+            }
+        }
+    }
+
+    // Finish the rebase
+    rebase.finish(None)
+        .map_err(|e| format!("Failed to finish rebase: {}", e))?;
+
+    Ok(PullResult {
+        success: true,
+        conflicts: vec![],
+        commits_received: commits_applied,
+        message: format!("Rebase completed successfully ({} commits applied)", commits_applied),
+    })
+}
+
+fn collect_conflicts(index: &git2::Index) -> Result<Vec<ConflictFile>, String> {
+    let mut conflicts = Vec::new();
+    
+    let conflicts_iter = index.conflicts()
+        .map_err(|e| format!("Failed to get conflicts: {}", e))?;
+    
+    for conflict in conflicts_iter {
+        let conflict = conflict
+            .map_err(|e| format!("Failed to read conflict: {}", e))?;
+        
+        // Determine conflict type first (before moving values)
+        let conflict_type = if conflict.our.is_some() && conflict.their.is_some() {
+            "content".to_string()
+        } else if conflict.our.is_some() && conflict.their.is_none() {
+            "delete/modify".to_string()
+        } else if conflict.our.is_none() && conflict.their.is_some() {
+            "modify/delete".to_string()
+        } else {
+            "unknown".to_string()
+        };
+        
+        // Now extract the path (moving values is fine here)
+        let path = if let Some(ours) = conflict.our {
+            String::from_utf8_lossy(&ours.path).to_string()
+        } else if let Some(theirs) = conflict.their {
+            String::from_utf8_lossy(&theirs.path).to_string()
+        } else if let Some(ancestor) = conflict.ancestor {
+            String::from_utf8_lossy(&ancestor.path).to_string()
+        } else {
+            "unknown".to_string()
+        };
+
+        conflicts.push(ConflictFile {
+            path,
+            conflict_type,
+        });
+    }
+    
+    Ok(conflicts)
+}
+
+#[tauri::command]
+fn push_to_remote(
+    path: String,
+    remote_name: String,
+    branch_name: String,
+    force: bool,
+    force_with_lease: bool,
+) -> Result<PushResult, String> {
+    use git2::{PushOptions, RemoteCallbacks};
+    use std::sync::{Arc, Mutex};
+
+    // Open the repository
+    let repo = Repository::open(&path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    // Find the remote
+    let mut remote = repo.find_remote(&remote_name)
+        .map_err(|e| format!("Remote '{}' not found: {}", remote_name, e))?;
+
+    // Track if push was rejected
+    let was_rejected = Arc::new(Mutex::new(false));
+    let rejection_reason = Arc::new(Mutex::new(String::new()));
+    
+    let was_rejected_clone = Arc::clone(&was_rejected);
+    let rejection_reason_clone = Arc::clone(&rejection_reason);
+
+    // Set up callbacks
+    let mut callbacks = RemoteCallbacks::new();
+    
+    // Credentials callback - try SSH agent
+    callbacks.credentials(|_url, username_from_url, _allowed_types| {
+        git2::Cred::ssh_key_from_agent(username_from_url.unwrap_or("git"))
+    });
+
+    // Push update callback to detect rejections
+    callbacks.push_update_reference(move |refname, status| {
+        if let Some(s) = status {
+            *was_rejected_clone.lock().unwrap() = true;
+            *rejection_reason_clone.lock().unwrap() = format!("{}: {}", refname, s);
+            return Err(git2::Error::from_str(&format!("Push rejected: {}", s)));
+        }
+        Ok(())
+    });
+
+    // Set up push options
+    let mut push_options = PushOptions::new();
+    push_options.remote_callbacks(callbacks);
+
+    // Build refspec
+    let refspec = if force_with_lease {
+        // Use --force-with-lease logic (safer force push)
+        format!("+refs/heads/{}:refs/heads/{}", branch_name, branch_name)
+    } else if force {
+        // Regular force push
+        format!("+refs/heads/{}:refs/heads/{}", branch_name, branch_name)
+    } else {
+        // Normal push
+        format!("refs/heads/{}:refs/heads/{}", branch_name, branch_name)
+    };
+
+    // Perform the push (the push operation itself will detect if remote is ahead)
+    let push_result = remote.push(&[&refspec], Some(&mut push_options));
+
+    match push_result {
+        Ok(_) => {
+            let rejected = *was_rejected.lock().unwrap();
+            let reason = rejection_reason.lock().unwrap().clone();
+            
+            if rejected {
+                Ok(PushResult {
+                    success: false,
+                    rejected: true,
+                    rejection_reason: reason,
+                    bytes_sent: 0,
+                    message: "Push was rejected by remote".to_string(),
+                })
+            } else {
+                Ok(PushResult {
+                    success: true,
+                    rejected: false,
+                    rejection_reason: String::new(),
+                    bytes_sent: 0, // libgit2 doesn't easily expose this
+                    message: format!("Successfully pushed to {}/{}", remote_name, branch_name),
+                })
+            }
+        }
+        Err(e) => {
+            // Check if it's a non-fast-forward error
+            let error_msg = e.message().to_string();
+            if error_msg.contains("non-fast-forward") || error_msg.contains("rejected") {
+                Ok(PushResult {
+                    success: false,
+                    rejected: true,
+                    rejection_reason: error_msg.clone(),
+                    bytes_sent: 0,
+                    message: "Push rejected: Remote has newer commits. Pull first or use force push.".to_string(),
+                })
+            } else {
+                Err(format!("Push failed: {}", error_msg))
+            }
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -1180,7 +1609,9 @@ pub fn run() {
             delete_branch,
             rename_branch,
             get_remote_status,
-            fetch_from_remote
+            fetch_from_remote,
+            pull_from_remote,
+            push_to_remote
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

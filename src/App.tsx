@@ -10,6 +10,9 @@ import { BranchSidebar } from "./components/BranchSidebar";
 import { BranchModal } from "./components/BranchModal";
 import { RemoteStatusBar } from "./components/RemoteStatusBar";
 import { ProgressToast } from "./components/ProgressToast";
+import { PullDialog } from "./components/PullDialog";
+import { PushDialog } from "./components/PushDialog";
+import { ConflictNotification } from "./components/ConflictNotification";
 
 interface RepoInfo {
   name: string;
@@ -395,6 +398,21 @@ function App() {
   const [fetchComplete, setFetchComplete] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
   
+  // Pull operation state
+  const [pullDialogOpen, setPullDialogOpen] = useState(false);
+  const [pullInProgress, setPullInProgress] = useState(false);
+  const [pullComplete, setPullComplete] = useState(false);
+  const [pullError, setPullError] = useState<string | null>(null);
+  const [pullConflicts, setPullConflicts] = useState<Array<{ path: string; conflict_type: string }>>([]);
+  const [remoteStatus, setRemoteStatus] = useState<{ ahead: number; behind: number; remoteName: string } | null>(null);
+  
+  // Push operation state
+  const [pushDialogOpen, setPushDialogOpen] = useState(false);
+  const [pushInProgress, setPushInProgress] = useState(false);
+  const [pushComplete, setPushComplete] = useState(false);
+  const [pushError, setPushError] = useState<string | null>(null);
+  const [commitsToPush, setCommitsToPush] = useState<Commit[]>([]);
+  
   const listContainerRef = useRef<HTMLDivElement>(null);
 
   // Save branch sidebar state to localStorage whenever it changes
@@ -602,6 +620,155 @@ function App() {
     }
   };
 
+  const handleOpenPullDialog = async () => {
+    if (!repoInfo) return;
+
+    try {
+      // Get remote status to show in dialog
+      const status = await invoke<{ 
+        has_remote: boolean; 
+        remote_name: string;
+        ahead: number;
+        behind: number;
+      }>('get_remote_status', {
+        path: repoInfo.path,
+        branchName: repoInfo.current_branch,
+      });
+
+      if (status.has_remote) {
+        setRemoteStatus({
+          ahead: status.ahead,
+          behind: status.behind,
+          remoteName: status.remote_name,
+        });
+        setPullDialogOpen(true);
+      }
+    } catch (err) {
+      console.error('Failed to get remote status:', err);
+    }
+  };
+
+  const handlePull = async (strategy: 'merge' | 'rebase') => {
+    if (!repoInfo) return;
+
+    setPullDialogOpen(false);
+    setPullInProgress(true);
+    setPullComplete(false);
+    setPullError(null);
+    setPullConflicts([]);
+
+    try {
+      const result = await invoke<{
+        success: boolean;
+        conflicts: Array<{ path: string; conflict_type: string }>;
+        commits_received: number;
+        message: string;
+      }>('pull_from_remote', {
+        path: repoInfo.path,
+        remoteName: remoteStatus?.remoteName || 'origin',
+        strategy: strategy === 'merge' ? 'Merge' : 'Rebase',
+      });
+
+      if (!result.success && result.conflicts.length > 0) {
+        // Show conflict notification
+        setPullConflicts(result.conflicts);
+        setPullError('Merge conflicts detected');
+      } else {
+        setPullComplete(true);
+        // Refresh the UI after successful pull
+        setTimeout(() => {
+          handleBranchChange();
+        }, 500);
+      }
+    } catch (err) {
+      setPullError(err as string);
+      console.error('Pull failed:', err);
+    } finally {
+      setPullInProgress(false);
+    }
+  };
+
+  const handleOpenPushDialog = async () => {
+    if (!repoInfo) return;
+
+    try {
+      // Get remote status to show in dialog
+      const status = await invoke<{ 
+        has_remote: boolean; 
+        remote_name: string;
+        ahead: number;
+        behind: number;
+      }>('get_remote_status', {
+        path: repoInfo.path,
+        branchName: repoInfo.current_branch,
+      });
+
+      if (status.has_remote) {
+        setRemoteStatus({
+          ahead: status.ahead,
+          behind: status.behind,
+          remoteName: status.remote_name,
+        });
+
+        // Get commits to push (only if ahead)
+        if (status.ahead > 0) {
+          // Get the commits that are ahead
+          const allCommits = await invoke<Commit[]>('get_commits', {
+            path: repoInfo.path,
+            limit: status.ahead,
+          });
+          setCommitsToPush(allCommits.slice(0, status.ahead));
+        } else {
+          setCommitsToPush([]);
+        }
+
+        setPushDialogOpen(true);
+      }
+    } catch (err) {
+      console.error('Failed to get remote status:', err);
+    }
+  };
+
+  const handlePush = async (force: boolean, forceWithLease: boolean) => {
+    if (!repoInfo) return;
+
+    setPushDialogOpen(false);
+    setPushInProgress(true);
+    setPushComplete(false);
+    setPushError(null);
+
+    try {
+      const result = await invoke<{
+        success: boolean;
+        rejected: boolean;
+        rejection_reason: string;
+        bytes_sent: number;
+        message: string;
+      }>('push_to_remote', {
+        path: repoInfo.path,
+        remoteName: remoteStatus?.remoteName || 'origin',
+        branchName: repoInfo.current_branch,
+        force: force,
+        forceWithLease: forceWithLease,
+      });
+
+      if (result.success) {
+        setPushComplete(true);
+        // Refresh the UI after successful push
+        setTimeout(() => {
+          handleBranchChange();
+        }, 500);
+      } else if (result.rejected) {
+        setPushError(result.message);
+      }
+    } catch (err) {
+      setPushError(err as string);
+      console.error('Push failed:', err);
+    } finally {
+      setPushInProgress(false);
+    }
+  };
+
   const handleBranchAction = (action: 'create' | 'rename' | 'delete', branchName?: string) => {
     setBranchModalMode(action);
     setSelectedBranch(branchName);
@@ -616,7 +783,7 @@ function App() {
           <h1 className="text-2xl font-bold tracking-tight">
             <span className="text-graft-500">Graft</span>
           </h1>
-          <span className="text-xs text-zinc-500 font-mono">v0.4.0</span>
+          <span className="text-xs text-zinc-500 font-mono">v0.5.0</span>
           
           {/* Branch Sidebar Toggle Button (only show when repo is open) */}
           {repoInfo && (
@@ -724,6 +891,44 @@ function App() {
                       <>
                         <span>↻</span>
                         <span>Fetch</span>
+                      </>
+                    )}
+                  </button>
+                  {/* Pull Button */}
+                  <button
+                    onClick={handleOpenPullDialog}
+                    disabled={pullInProgress}
+                    className="px-3 py-1.5 text-xs bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 disabled:bg-zinc-900 disabled:text-zinc-600 rounded-lg font-medium transition-all duration-200 flex items-center gap-1.5"
+                    title="Pull from remote"
+                  >
+                    {pullInProgress ? (
+                      <>
+                        <span className="animate-spin">⟳</span>
+                        <span>Pulling...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>⬇</span>
+                        <span>Pull</span>
+                      </>
+                    )}
+                  </button>
+                  {/* Push Button */}
+                  <button
+                    onClick={handleOpenPushDialog}
+                    disabled={pushInProgress}
+                    className="px-3 py-1.5 text-xs bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 disabled:bg-zinc-900 disabled:text-zinc-600 rounded-lg font-medium transition-all duration-200 flex items-center gap-1.5"
+                    title="Push to remote"
+                  >
+                    {pushInProgress ? (
+                      <>
+                        <span className="animate-spin">⟳</span>
+                        <span>Pushing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>⬆</span>
+                        <span>Push</span>
                       </>
                     )}
                   </button>
@@ -926,6 +1131,76 @@ function App() {
             setFetchComplete(false);
             setFetchError(null);
           }}
+        />
+      )}
+
+      {/* Progress Toast for Pull Operations */}
+      {(pullInProgress || pullComplete || (pullError && pullConflicts.length === 0)) && (
+        <ProgressToast
+          operation="pull"
+          stage={pullInProgress ? 'Pulling changes...' : pullComplete ? 'Pull complete' : 'Pull failed'}
+          progress={pullInProgress ? 50 : 100}
+          isComplete={pullComplete}
+          isError={!!pullError && pullConflicts.length === 0}
+          message={pullError && pullConflicts.length === 0 ? pullError : pullComplete ? 'Successfully pulled changes' : 'Pulling changes...'}
+          onClose={() => {
+            setPullComplete(false);
+            if (pullConflicts.length === 0) {
+              setPullError(null);
+            }
+          }}
+        />
+      )}
+
+      {/* Pull Dialog */}
+      {pullDialogOpen && remoteStatus && (
+        <PullDialog
+          remoteName={remoteStatus.remoteName}
+          branchName={repoInfo?.current_branch || ''}
+          ahead={remoteStatus.ahead}
+          behind={remoteStatus.behind}
+          onPull={handlePull}
+          onCancel={() => setPullDialogOpen(false)}
+        />
+      )}
+
+      {/* Conflict Notification */}
+      {pullConflicts.length > 0 && (
+        <ConflictNotification
+          conflicts={pullConflicts}
+          onDismiss={() => {
+            setPullConflicts([]);
+            setPullError(null);
+          }}
+        />
+      )}
+
+      {/* Progress Toast for Push Operations */}
+      {(pushInProgress || pushComplete || pushError) && (
+        <ProgressToast
+          operation="push"
+          stage={pushInProgress ? 'Pushing changes...' : pushComplete ? 'Push complete' : 'Push failed'}
+          progress={pushInProgress ? 50 : 100}
+          isComplete={pushComplete}
+          isError={!!pushError}
+          message={pushError || (pushComplete ? 'Successfully pushed changes' : 'Pushing changes...')}
+          onClose={() => {
+            setPushComplete(false);
+            setPushError(null);
+          }}
+        />
+      )}
+
+      {/* Push Dialog */}
+      {pushDialogOpen && remoteStatus && (
+        <PushDialog
+          remoteName={remoteStatus.remoteName}
+          branchName={repoInfo?.current_branch || ''}
+          ahead={remoteStatus.ahead}
+          behind={remoteStatus.behind}
+          commitsToPush={commitsToPush}
+          onPush={handlePush}
+          onCancel={() => setPushDialogOpen(false)}
         />
       )}
     </div>
