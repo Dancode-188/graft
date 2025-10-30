@@ -6,6 +6,7 @@ interface RebaseCommitItemProps {
   onActionChange: (index: number, action: RebaseAction) => void;
   onDragStart: (index: number) => void;
   onDragOver: (index: number) => void;
+  onDragEnd: () => void;
   onDrop: (index: number) => void;
   isDragging: boolean;
   dragOverIndex: number | null;
@@ -17,6 +18,7 @@ export function RebaseCommitItem({
   onActionChange,
   onDragStart,
   onDragOver,
+  onDragEnd,
   onDrop,
   isDragging,
   dragOverIndex,
@@ -26,11 +28,13 @@ export function RebaseCommitItem({
 
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", index.toString());
     onDragStart(index);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
     onDragOver(index);
   };
 
@@ -51,18 +55,20 @@ export function RebaseCommitItem({
         draggable
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
+        onDragEnd={onDragEnd}
         onDrop={handleDrop}
         className={`
           group relative flex items-center gap-3 px-3 py-2.5
           bg-zinc-800/50 hover:bg-zinc-800 
           border border-zinc-700 rounded-lg
           transition-all duration-200
+          cursor-move
           ${isDragging ? "opacity-40 scale-95" : "opacity-100 scale-100"}
           ${isDropTarget ? "ring-2 ring-graft-green" : ""}
         `}
       >
         {/* Drag Handle */}
-        <div className="flex-shrink-0 cursor-grab active:cursor-grabbing text-zinc-500 hover:text-zinc-300 transition-colors">
+        <div className="flex-shrink-0 text-zinc-500 group-hover:text-zinc-300 transition-colors">
           <svg
             width="16"
             height="16"

@@ -87,6 +87,11 @@ export function InteractiveRebaseModal({
     setDragOverIndex(index);
   };
 
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
   const handleDrop = (targetIndex: number) => {
     if (draggedIndex === null || draggedIndex === targetIndex) {
       setDraggedIndex(null);
@@ -190,6 +195,7 @@ export function InteractiveRebaseModal({
               onActionChange={handleActionChange}
               onDragStart={handleDragStart}
               onDragOver={handleDragOver}
+              onDragEnd={handleDragEnd}
               onDrop={handleDrop}
               isDragging={draggedIndex === index}
               dragOverIndex={dragOverIndex}
