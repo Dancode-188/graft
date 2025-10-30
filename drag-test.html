@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Drag-and-Drop Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .item {
+            padding: 20px;
+            margin: 10px 0;
+            background: #2a2a2a;
+            border: 2px solid #3a3a3a;
+            border-radius: 8px;
+            cursor: move;
+            user-select: none;
+            transition: all 0.2s;
+        }
+        .item.dragging {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+        .item.drag-over {
+            border-color: #4ade80;
+            background: #2a3a2a;
+        }
+        .handle {
+            display: inline-block;
+            margin-right: 10px;
+            cursor: grab;
+        }
+        .handle:active {
+            cursor: grabbing;
+        }
+        h1 {
+            color: #4ade80;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            background: #2a2a2a;
+            border-radius: 8px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Drag-and-Drop Test</h1>
+        <p>Grab the ≡ icon and drag items to reorder them.</p>
+        
+        <div id="list">
+            <div class="item">
+                <span class="handle" draggable="true" data-index="0">≡</span>
+                Item 1 - Drag by the handle
+            </div>
+            <div class="item">
+                <span class="handle" draggable="true" data-index="1">≡</span>
+                Item 2 - Drag by the handle
+            </div>
+            <div class="item">
+                <span class="handle" draggable="true" data-index="2">≡</span>
+                Item 3 - Drag by the handle
+            </div>
+            <div class="item">
+                <span class="handle" draggable="true" data-index="3">≡</span>
+                Item 4 - Drag by the handle
+            </div>
+        </div>
+
+        <div class="status">
+            <strong>Status:</strong> <span id="status">Ready</span><br>
+            <strong>Events:</strong> <span id="events"></span>
+        </div>
+    </div>
+
+    <script>
+        let draggedIndex = null;
+        const items = document.querySelectorAll('.item');
+        const handles = document.querySelectorAll('.handle');
+        const status = document.getElementById('status');
+        const events = document.getElementById('events');
+
+        function log(message) {
+            console.log(message);
+            events.textContent = message;
+        }
+
+        // Drag handlers on the handle
+        handles.forEach((handle, index) => {
+            handle.addEventListener('dragstart', (e) => {
+                draggedIndex = parseInt(e.target.dataset.index);
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', draggedIndex.toString());
+                items[draggedIndex].classList.add('dragging');
+                log(`✅ Drag started on item ${draggedIndex + 1}`);
+                status.textContent = `Dragging item ${draggedIndex + 1}`;
+                console.log('dragstart event:', { draggedIndex, effectAllowed: e.dataTransfer.effectAllowed });
+            });
+
+            handle.addEventListener('dragend', (e) => {
+                items.forEach(item => {
+                    item.classList.remove('dragging');
+                    item.classList.remove('drag-over');
+                });
+                log('Drag ended');
+                status.textContent = 'Ready';
+            });
+        });
+
+        // Drop handlers on the items
+        items.forEach((item, index) => {
+            // Prevent items themselves from being dragged (only handles should drag)
+            item.addEventListener('dragstart', (e) => {
+                if (e.target === item) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+
+            item.addEventListener('dragover', (e) => {
+                console.log(`🔥 DRAGOVER FIRED on item ${index + 1}`);
+                if (e.preventDefault) {
+                    e.preventDefault();
+                }
+                e.dataTransfer.dropEffect = 'move';
+                log(`⬇️ Drag over item ${index + 1}`);
+                return false;
+            });
+
+            item.addEventListener('dragenter', (e) => {
+                if (e.preventDefault) {
+                    e.preventDefault();
+                }
+                if (index !== draggedIndex) {
+                    item.classList.add('drag-over');
+                }
+                return false;
+            });
+
+            item.addEventListener('dragleave', (e) => {
+                item.classList.remove('drag-over');
+            });
+
+            item.addEventListener('drop', (e) => {
+                console.log(`🎯 DROP FIRED on item ${index + 1}`);
+                if (e.stopPropagation) {
+                    e.stopPropagation();
+                }
+                if (e.preventDefault) {
+                    e.preventDefault();
+                }
+                
+                item.classList.remove('drag-over');
+                
+                if (draggedIndex !== null && draggedIndex !== index) {
+                    log(`✅ Dropped item ${draggedIndex + 1} onto item ${index + 1}`);
+                    status.textContent = `✅ Reordered! ${draggedIndex + 1} → ${index + 1}`;
+                    console.log('DROP SUCCESS:', { from: draggedIndex, to: index });
+                    
+                    // Reorder the items
+                    const list = document.getElementById('list');
+                    const draggedItem = items[draggedIndex];
+                    const targetItem = items[index];
+                    
+                    if (draggedIndex < index) {
+                        list.insertBefore(draggedItem, targetItem.nextSibling);
+                    } else {
+                        list.insertBefore(draggedItem, targetItem);
+                    }
+                }
+                
+                return false;
+            });
+        });
+
+        log('Test loaded. Try dragging items by their ≡ handles.');
+    </script>
+</body>
+</html>

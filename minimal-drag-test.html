@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Minimal Drag Test</title>
+    <style>
+        body {
+            font-family: Arial;
+            padding: 50px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .box {
+            width: 200px;
+            padding: 30px;
+            margin: 20px;
+            border: 2px solid #4ade80;
+            background: #2a2a2a;
+            border-radius: 8px;
+        }
+        .draggable {
+            cursor: move;
+        }
+        .drag-over {
+            background: #3a4a3a;
+            border-color: #4ade80;
+        }
+    </style>
+</head>
+<body>
+    <h1>Minimal Drag Test</h1>
+    <p>Drag the green box to the drop zone</p>
+    
+    <div id="draggable" class="box draggable" draggable="true">
+        DRAG ME
+    </div>
+    
+    <div id="dropzone" class="box">
+        DROP HERE
+    </div>
+    
+    <div id="log" style="margin-top: 30px; padding: 20px; background: #2a2a2a; border-radius: 8px;"></div>
+    
+    <script>
+        const draggable = document.getElementById('draggable');
+        const dropzone = document.getElementById('dropzone');
+        const log = document.getElementById('log');
+        
+        function addLog(msg) {
+            console.log(msg);
+            log.innerHTML += msg + '<br>';
+        }
+        
+        addLog('Page loaded');
+        
+        draggable.addEventListener('dragstart', (e) => {
+            addLog('✅ DRAGSTART');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', 'test data');
+        });
+        
+        draggable.addEventListener('dragend', (e) => {
+            addLog('DRAGEND');
+        });
+        
+        dropzone.addEventListener('dragenter', (e) => {
+            addLog('👋 DRAGENTER on dropzone');
+            e.preventDefault();
+            dropzone.classList.add('drag-over');
+        });
+        
+        dropzone.addEventListener('dragover', (e) => {
+            addLog('🔥 DRAGOVER on dropzone');
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        });
+        
+        dropzone.addEventListener('dragleave', (e) => {
+            addLog('DRAGLEAVE');
+            dropzone.classList.remove('drag-over');
+        });
+        
+        dropzone.addEventListener('drop', (e) => {
+            addLog('🎯 DROP!');
+            e.preventDefault();
+            dropzone.classList.remove('drag-over');
+            const data = e.dataTransfer.getData('text/plain');
+            addLog('Data received: ' + data);
+        });
+        
+        addLog('Event listeners attached');
+    </script>
+</body>
+</html>
