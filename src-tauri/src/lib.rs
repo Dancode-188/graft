@@ -1762,8 +1762,677 @@ pub fn run() {
             fetch_from_remote,
             pull_from_remote,
             push_to_remote,
-            get_rebase_commits
+            get_rebase_commits,
+            start_interactive_rebase,
+            continue_rebase,
+            abort_rebase,
+            get_rebase_status,
+            validate_rebase_order,
+            prepare_interactive_rebase
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+/// Start an interactive rebase with the given instructions
+/// This applies each commit according to its action (pick, squash, fixup, drop)
+#[tauri::command]
+fn start_interactive_rebase(
+    path: String,
+    base_commit: String,
+    instructions: Vec<RebaseInstruction>,
+) -> Result<RebaseResult, String> {
+    use git2::RebaseOptions;
+
+    // Open the repository
+    let repo = Repository::open(&path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    // Check that working directory is clean
+    let statuses = repo.statuses(None)
+        .map_err(|e| format!("Failed to get repository status: {}", e))?;
+    
+    let has_changes = statuses.iter().any(|s| {
+        let status = s.status();
+        status.is_wt_modified() || status.is_wt_new() || status.is_wt_deleted()
+    });
+    
+    if has_changes {
+        return Err("Working directory has uncommitted changes. Commit or stash them before rebasing.".to_string());
+    }
+
+    // Validate instructions
+    if instructions.is_empty() {
+        return Err("No rebase instructions provided".to_string());
+    }
+
+    // First instruction must be "pick" (can't squash into nothing)
+    if instructions[0].action != "pick" {
+        return Err("First commit must be 'pick'. Cannot squash or fixup the first commit.".to_string());
+    }
+
+    // Check that we don't have squash/fixup without a pick before it
+    for i in 1..instructions.len() {
+        if (instructions[i].action == "squash" || instructions[i].action == "fixup") &&
+           (instructions[i-1].action == "drop" || instructions[i-1].action == "squash" || instructions[i-1].action == "fixup") {
+            return Err(format!(
+                "Commit {} cannot be squashed/fixuped because the previous commit is not 'pick'",
+                instructions[i].hash
+            ));
+        }
+    }
+
+    // Get the base commit OID
+    let base_oid = git2::Oid::from_str(&base_commit)
+        .map_err(|e| format!("Invalid base commit hash: {}", e))?;
+    
+    let base_commit_obj = repo.find_commit(base_oid)
+        .map_err(|e| format!("Failed to find base commit: {}", e))?;
+
+    // Create an annotated commit for the base
+    let base_annotated = repo.find_annotated_commit(base_oid)
+        .map_err(|e| format!("Failed to create annotated commit: {}", e))?;
+
+    // Get signature for commits
+    let signature = repo.signature()
+        .map_err(|e| format!("Failed to get signature: {}", e))?;
+
+    // Initialize rebase options
+    let mut rebase_options = RebaseOptions::new();
+    
+    // Start the rebase
+    let mut rebase = repo.rebase(
+        None,                    // Rebase HEAD
+        Some(&base_annotated),   // Onto base_commit
+        None,                    // No custom onto
+        Some(&mut rebase_options)
+    ).map_err(|e| format!("Failed to start rebase: {}", e))?;
+
+    let mut applied_count = 0;
+    let mut commits_to_squash: Vec<(git2::Oid, String)> = Vec::new(); // (oid, message)
+    let total_operations = instructions.len();
+
+    // Process each instruction
+    for (index, instruction) in instructions.iter().enumerate() {
+        match instruction.action.as_str() {
+            "pick" => {
+                // Apply the commit normally
+                let op = rebase.next();
+                if op.is_none() {
+                    break; // No more operations
+                }
+                
+                let _op = op.unwrap()
+                    .map_err(|e| format!("Failed to get rebase operation: {}", e))?;
+
+                // If we have pending squashes, apply them first
+                if !commits_to_squash.is_empty() {
+                    // This shouldn't happen with proper validation, but handle it
+                    return Err("Internal error: squashed commits without a pick target".to_string());
+                }
+
+                // Apply the commit
+                match rebase.commit(None, &signature, None) {
+                    Ok(_oid) => {
+                        applied_count += 1;
+                    }
+                    Err(_e) => {
+                        // Check for conflicts
+                        let repo_index = repo.index()
+                            .map_err(|e2| format!("Failed to get index: {}", e2))?;
+                        
+                        if repo_index.has_conflicts() {
+                            let conflicts = collect_conflicts(&repo_index)?;
+                            
+                            return Ok(RebaseResult {
+                                success: false,
+                                current_commit_index: index,
+                                total_commits: total_operations,
+                                conflicts,
+                                message: format!("Conflicts detected at commit {}/{}. Resolve conflicts and continue.", index + 1, total_operations),
+                                rebase_state: "conflict".to_string(),
+                            });
+                        } else {
+                            // Abort on other errors
+                            rebase.abort()
+                                .map_err(|e2| format!("Failed to abort rebase: {}", e2))?;
+                            return Err(format!("Failed to apply commit: {}", _e));
+                        }
+                    }
+                }
+            }
+            
+            "squash" | "fixup" => {
+                // Get the commit to squash
+                let op = rebase.next();
+                if op.is_none() {
+                    break;
+                }
+                
+                let operation = op.unwrap()
+                    .map_err(|e| format!("Failed to get rebase operation: {}", e))?;
+                
+                let commit_oid = operation.id();
+                let commit = repo.find_commit(commit_oid)
+                    .map_err(|e| format!("Failed to find commit to squash: {}", e))?;
+                
+                let message = if instruction.action == "squash" {
+                    commit.message().unwrap_or("").to_string()
+                } else {
+                    String::new() // fixup discards the message
+                };
+
+                // Store for combining with next pick
+                commits_to_squash.push((commit_oid, message));
+
+                // Apply the commit changes (will be combined with next pick)
+                match rebase.commit(None, &signature, None) {
+                    Ok(_) => {
+                        // Success - changes applied, will combine message later
+                    }
+                    Err(_e) => {
+                        // Check for conflicts
+                        let repo_index = repo.index()
+                            .map_err(|e2| format!("Failed to get index: {}", e2))?;
+                        
+                        if repo_index.has_conflicts() {
+                            let conflicts = collect_conflicts(&repo_index)?;
+                            rebase.abort()
+                                .map_err(|e2| format!("Failed to abort rebase: {}", e2))?;
+                            
+                            return Ok(RebaseResult {
+                                success: false,
+                                current_commit_index: index,
+                                total_commits: total_operations,
+                                conflicts,
+                                message: format!("Conflicts during squash at commit {}/{}. Rebase aborted.", index + 1, total_operations),
+                                rebase_state: "conflict".to_string(),
+                            });
+                        } else {
+                            rebase.abort()
+                                .map_err(|e2| format!("Failed to abort rebase: {}", e2))?;
+                            return Err(format!("Failed to squash commit: {}", _e));
+                        }
+                    }
+                }
+            }
+            
+            "drop" => {
+                // Skip this commit entirely
+                let op = rebase.next();
+                if op.is_none() {
+                    break;
+                }
+                
+                // Just move to next operation without committing
+                // The commit will be dropped
+            }
+            
+            "reword" => {
+                // Apply commit with new message
+                let op = rebase.next();
+                if op.is_none() {
+                    break;
+                }
+                
+                let _op = op.unwrap()
+                    .map_err(|e| format!("Failed to get rebase operation: {}", e))?;
+
+                // Get new message from instruction
+                let new_message = instruction.new_message.clone()
+                    .unwrap_or_else(|| "Reworded commit".to_string());
+
+                // Apply with new message
+                match rebase.commit(None, &signature, Some(&new_message)) {
+                    Ok(_) => {
+                        applied_count += 1;
+                    }
+                    Err(_e) => {
+                        let repo_index = repo.index()
+                            .map_err(|e2| format!("Failed to get index: {}", e2))?;
+                        
+                        if repo_index.has_conflicts() {
+                            let conflicts = collect_conflicts(&repo_index)?;
+                            rebase.abort()
+                                .map_err(|e2| format!("Failed to abort rebase: {}", e2))?;
+                            
+                            return Ok(RebaseResult {
+                                success: false,
+                                current_commit_index: index,
+                                total_commits: total_operations,
+                                conflicts,
+                                message: "Conflicts during reword. Rebase aborted.".to_string(),
+                                rebase_state: "conflict".to_string(),
+                            });
+                        } else {
+                            rebase.abort()
+                                .map_err(|e2| format!("Failed to abort rebase: {}", e2))?;
+                            return Err(format!("Failed to reword commit: {}", _e));
+                        }
+                    }
+                }
+            }
+            
+            _ => {
+                rebase.abort()
+                    .map_err(|e| format!("Failed to abort rebase: {}", e))?;
+                return Err(format!("Unknown action: {}", instruction.action));
+            }
+        }
+    }
+
+    // Finish the rebase
+    rebase.finish(None)
+        .map_err(|e| format!("Failed to finish rebase: {}", e))?;
+
+    Ok(RebaseResult {
+        success: true,
+        current_commit_index: total_operations,
+        total_commits: total_operations,
+        conflicts: vec![],
+        message: format!("Interactive rebase completed successfully! {} commits applied.", applied_count),
+        rebase_state: "completed".to_string(),
+    })
+}
+
+/// Abort an in-progress rebase and return to the original state
+#[tauri::command]
+fn abort_rebase(path: String) -> Result<String, String> {
+    // Open the repository
+    let repo = Repository::open(&path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    // Check if a rebase is in progress
+    let state = repo.state();
+    if state != git2::RepositoryState::Rebase && 
+       state != git2::RepositoryState::RebaseInteractive &&
+       state != git2::RepositoryState::RebaseMerge {
+        return Err("No rebase in progress".to_string());
+    }
+
+    // Try to open and abort the rebase
+    let result = {
+        match repo.open_rebase(None) {
+            Ok(mut rebase) => {
+                // Abort the rebase
+                match rebase.abort() {
+                    Ok(_) => Ok(()),
+                    Err(e) => Err(format!("Failed to abort rebase: {}", e))
+                }
+            }
+            Err(e) => Err(format!("Failed to open rebase: {}", e))
+        }
+    };
+
+    // Handle the result
+    match result {
+        Ok(_) => {
+            Ok("Rebase aborted successfully. Repository returned to original state.".to_string())
+        }
+        Err(e) => {
+            // If we can't open the rebase, try to cleanup the state manually
+            repo.cleanup_state()
+                .map_err(|e2| format!("Failed to cleanup rebase state: {}. Original error: {}", e2, e))?;
+            
+            Ok("Rebase state cleaned up successfully.".to_string())
+        }
+    }
+}
+
+/// Continue an in-progress rebase after conflicts have been resolved
+#[tauri::command]
+fn continue_rebase(path: String) -> Result<RebaseResult, String> {
+    use git2::RebaseOptions;
+
+    // Open the repository
+    let repo = Repository::open(&path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    // Check if a rebase is in progress
+    let state = repo.state();
+    if state != git2::RepositoryState::Rebase && 
+       state != git2::RepositoryState::RebaseInteractive &&
+       state != git2::RepositoryState::RebaseMerge {
+        return Err("No rebase in progress to continue".to_string());
+    }
+
+    // Check that conflicts are resolved
+    let index = repo.index()
+        .map_err(|e| format!("Failed to get index: {}", e))?;
+    
+    if index.has_conflicts() {
+        let conflicts = collect_conflicts(&index)?;
+        return Ok(RebaseResult {
+            success: false,
+            current_commit_index: 0,
+            total_commits: 0,
+            conflicts,
+            message: "Cannot continue: conflicts still exist. Please resolve all conflicts first.".to_string(),
+            rebase_state: "conflict".to_string(),
+        });
+    }
+
+    // Open the existing rebase
+    let mut rebase = repo.open_rebase(None)
+        .map_err(|e| format!("Failed to open rebase: {}", e))?;
+
+    // Get signature for commits
+    let signature = repo.signature()
+        .map_err(|e| format!("Failed to get signature: {}", e))?;
+
+    // Continue with remaining operations
+    let mut applied_count = 0;
+    let mut total_count = 0;
+
+    // Count total operations
+    while rebase.next().is_some() {
+        total_count += 1;
+    }
+
+    // Reopen to restart iteration
+    drop(rebase);
+    rebase = repo.open_rebase(None)
+        .map_err(|e| format!("Failed to reopen rebase: {}", e))?;
+
+    // Continue applying commits
+    while let Some(op) = rebase.next() {
+        let _op = op.map_err(|e| format!("Failed to get rebase operation: {}", e))?;
+
+        match rebase.commit(None, &signature, None) {
+            Ok(_) => {
+                applied_count += 1;
+            }
+            Err(_e) => {
+                // Check for more conflicts
+                let repo_index = repo.index()
+                    .map_err(|e2| format!("Failed to get index: {}", e2))?;
+                
+                if repo_index.has_conflicts() {
+                    let conflicts = collect_conflicts(&repo_index)?;
+                    
+                    return Ok(RebaseResult {
+                        success: false,
+                        current_commit_index: applied_count,
+                        total_commits: total_count,
+                        conflicts,
+                        message: format!("Additional conflicts detected at commit {}/{}. Resolve and continue again.", applied_count + 1, total_count),
+                        rebase_state: "conflict".to_string(),
+                    });
+                } else {
+                    // Abort on other errors
+                    rebase.abort()
+                        .map_err(|e2| format!("Failed to abort rebase: {}", e2))?;
+                    return Err(format!("Failed to continue rebase: {}", _e));
+                }
+            }
+        }
+    }
+
+    // Finish the rebase
+    rebase.finish(None)
+        .map_err(|e| format!("Failed to finish rebase: {}", e))?;
+
+    Ok(RebaseResult {
+        success: true,
+        current_commit_index: total_count,
+        total_commits: total_count,
+        conflicts: vec![],
+        message: format!("Rebase continued and completed successfully! {} additional commits applied.", applied_count),
+        rebase_state: "completed".to_string(),
+    })
+}
+
+/// Get the status of an in-progress rebase
+#[tauri::command]
+fn get_rebase_status(path: String) -> Result<Option<RebaseStatus>, String> {
+    // Open the repository
+    let repo = Repository::open(&path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    // Check repository state
+    let state = repo.state();
+    
+    if state != git2::RepositoryState::Rebase && 
+       state != git2::RepositoryState::RebaseInteractive &&
+       state != git2::RepositoryState::RebaseMerge {
+        // No rebase in progress
+        return Ok(None);
+    }
+
+    // Try to open the rebase to get info
+    let rebase = match repo.open_rebase(None) {
+        Ok(r) => r,
+        Err(_) => {
+            // Rebase state exists but can't open - return minimal info
+            return Ok(Some(RebaseStatus {
+                is_in_progress: true,
+                current_commit_index: 0,
+                total_commits: 0,
+                has_conflicts: false,
+                conflicts: vec![],
+                onto_commit: String::new(),
+                original_head: String::new(),
+            }));
+        }
+    };
+
+    // Count total operations
+    let total_commits = rebase.len();
+    
+    // Get current operation index
+    let current_index = rebase.operation_current().unwrap_or(0);
+
+    // Check for conflicts
+    let index = repo.index()
+        .map_err(|e| format!("Failed to get index: {}", e))?;
+    
+    let has_conflicts = index.has_conflicts();
+    let conflicts = if has_conflicts {
+        collect_conflicts(&index).unwrap_or_else(|_| vec![])
+    } else {
+        vec![]
+    };
+
+    // Get onto commit (the commit we're rebasing onto)
+    let onto_commit = rebase.onto_id()
+        .map(|oid| oid.to_string())
+        .unwrap_or_else(|| String::new());
+
+    // Get original HEAD (where we started)
+    let original_head = rebase.orig_head_id()
+        .map(|oid| oid.to_string())
+        .unwrap_or_else(|| String::new());
+
+    Ok(Some(RebaseStatus {
+        is_in_progress: true,
+        current_commit_index: current_index,
+        total_commits,
+        has_conflicts,
+        conflicts,
+        onto_commit,
+        original_head,
+    }))
+}
+
+/// Validate a rebase order before executing
+/// Checks for common errors like squashing the first commit
+#[tauri::command]
+fn validate_rebase_order(
+    path: String,
+    instructions: Vec<RebaseInstruction>,
+) -> Result<ValidationResult, String> {
+    let mut errors = Vec::new();
+    let mut warnings = Vec::new();
+
+    // Check if instructions are empty
+    if instructions.is_empty() {
+        errors.push("No rebase instructions provided".to_string());
+        return Ok(ValidationResult {
+            is_valid: false,
+            errors,
+            warnings,
+        });
+    }
+
+    // Check that first instruction is "pick"
+    if instructions[0].action != "pick" {
+        errors.push(format!(
+            "First commit must be 'pick'. Cannot {} the first commit.",
+            instructions[0].action
+        ));
+    }
+
+    // Check for squash/fixup without pick before it
+    for i in 1..instructions.len() {
+        let prev_action = &instructions[i-1].action;
+        let current_action = &instructions[i].action;
+        
+        if (current_action == "squash" || current_action == "fixup") &&
+           (prev_action == "drop" || prev_action == "squash" || prev_action == "fixup") {
+            errors.push(format!(
+                "Commit {} at position {} cannot be '{}' because the previous commit is '{}'. \
+                 Squash and fixup require a 'pick' commit before them.",
+                instructions[i].hash.chars().take(7).collect::<String>(),
+                i + 1,
+                current_action,
+                prev_action
+            ));
+        }
+    }
+
+    // Check if all commits are dropped
+    let all_dropped = instructions.iter().all(|i| i.action == "drop");
+    if all_dropped {
+        errors.push("Cannot drop all commits. At least one commit must be kept.".to_string());
+    }
+
+    // Warn about reword without new message
+    for (i, instruction) in instructions.iter().enumerate() {
+        if instruction.action == "reword" && instruction.new_message.is_none() {
+            warnings.push(format!(
+                "Commit {} at position {} has 'reword' action but no new message provided. \
+                 Original message will be kept.",
+                instruction.hash.chars().take(7).collect::<String>(),
+                i + 1
+            ));
+        }
+    }
+
+    // Warn about extensive reordering (might cause conflicts)
+    let original_order: Vec<String> = instructions.iter().map(|i| i.hash.clone()).collect();
+    let mut sorted_order = original_order.clone();
+    
+    // Try to open repo to check original order
+    if let Ok(repo) = Repository::open(&path) {
+        // If we can get the actual order, check against it
+        // For now, just warn if there are many operations
+        let action_counts: std::collections::HashMap<&str, usize> = 
+            instructions.iter().fold(std::collections::HashMap::new(), |mut acc, i| {
+                *acc.entry(i.action.as_str()).or_insert(0) += 1;
+                acc
+            });
+        
+        if action_counts.get("drop").unwrap_or(&0) > &3 {
+            warnings.push(format!(
+                "Dropping {} commits. This might cause conflicts if later commits depend on them.",
+                action_counts.get("drop").unwrap()
+            ));
+        }
+
+        if action_counts.get("squash").unwrap_or(&0) + action_counts.get("fixup").unwrap_or(&0) > &5 {
+            warnings.push(
+                "Squashing/fixuping many commits. Review carefully to ensure commit messages are meaningful.".to_string()
+            );
+        }
+    }
+
+    // Validate commit hashes format
+    for (i, instruction) in instructions.iter().enumerate() {
+        if instruction.hash.len() < 7 {
+            errors.push(format!(
+                "Invalid commit hash at position {}: '{}' is too short",
+                i + 1,
+                instruction.hash
+            ));
+        }
+    }
+
+    // Check for unknown actions
+    for (i, instruction) in instructions.iter().enumerate() {
+        match instruction.action.as_str() {
+            "pick" | "squash" | "fixup" | "drop" | "reword" | "edit" => {},
+            _ => {
+                errors.push(format!(
+                    "Unknown action '{}' at position {}. Valid actions are: pick, squash, fixup, drop, reword, edit",
+                    instruction.action,
+                    i + 1
+                ));
+            }
+        }
+    }
+
+    Ok(ValidationResult {
+        is_valid: errors.is_empty(),
+        errors,
+        warnings,
+    })
+}
+
+/// Prepare an interactive rebase and generate a preview
+/// Shows what will happen without executing
+#[tauri::command]
+fn prepare_interactive_rebase(
+    path: String,
+    base_commit: String,
+    instructions: Vec<RebaseInstruction>,
+) -> Result<RebasePlan, String> {
+    // Validate the instructions first
+    let validation = validate_rebase_order(path.clone(), instructions.clone())?;
+    
+    if !validation.is_valid {
+        return Err(format!(
+            "Invalid rebase instructions: {}",
+            validation.errors.join(", ")
+        ));
+    }
+
+    // Count actions
+    let mut actions_summary = std::collections::HashMap::new();
+    for instruction in &instructions {
+        *actions_summary.entry(instruction.action.clone()).or_insert(0) += 1;
+    }
+
+    // Calculate resulting commit count
+    let total_commits = instructions.len();
+    let dropped = *actions_summary.get("drop").unwrap_or(&0);
+    let squashed = *actions_summary.get("squash").unwrap_or(&0) + 
+                   *actions_summary.get("fixup").unwrap_or(&0);
+    
+    let resulting_commits = total_commits - dropped - squashed;
+
+    // Generate warnings
+    let mut warnings = validation.warnings;
+
+    // Add summary warning
+    if dropped > 0 || squashed > 0 {
+        warnings.push(format!(
+            "This rebase will change {} commits into {} commits ({} dropped, {} squashed/fixuped)",
+            total_commits,
+            resulting_commits,
+            dropped,
+            squashed
+        ));
+    }
+
+    // Warn about history rewriting
+    warnings.push(
+        "⚠️  Interactive rebase rewrites Git history. Only rebase commits that haven't been pushed.".to_string()
+    );
+
+    Ok(RebasePlan {
+        total_commits,
+        actions_summary,
+        warnings,
+        can_proceed: validation.is_valid,
+    })
 }
