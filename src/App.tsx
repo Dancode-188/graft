@@ -9,6 +9,7 @@ import { DiffViewer } from "./components/DiffViewer";
 import { BranchSidebar } from "./components/BranchSidebar";
 import { BranchModal } from "./components/BranchModal";
 import { RemoteStatusBar } from "./components/RemoteStatusBar";
+import { ProgressToast } from "./components/ProgressToast";
 
 interface RepoInfo {
   name: string;
@@ -17,7 +18,7 @@ interface RepoInfo {
   is_bare: boolean;
 }
 
-interface Commit {
+export interface Commit {
   hash: string;
   short_hash: string;
   message: string;
@@ -387,6 +388,13 @@ function App() {
   const [branchModalOpen, setBranchModalOpen] = useState(false);
   const [branchModalMode, setBranchModalMode] = useState<'create' | 'rename' | 'delete'>('create');
   const [selectedBranch, setSelectedBranch] = useState<string | undefined>(undefined);
+  
+  // Fetch operation state
+  const [fetchInProgress, setFetchInProgress] = useState(false);
+  const [fetchProgress, setFetchProgress] = useState({ current: 0, total: 0, message: '' });
+  const [fetchComplete, setFetchComplete] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  
   const listContainerRef = useRef<HTMLDivElement>(null);
 
   // Save branch sidebar state to localStorage whenever it changes
@@ -558,6 +566,42 @@ function App() {
     }
   };
 
+  const handleFetch = async () => {
+    if (!repoInfo) return;
+
+    setFetchInProgress(true);
+    setFetchComplete(false);
+    setFetchError(null);
+    setFetchProgress({ current: 0, total: 0, message: 'Connecting to remote...' });
+
+    try {
+      const result = await invoke<{ success: boolean; bytes_received: number; objects_received: number; message: string }>(
+        'fetch_from_remote',
+        {
+          path: repoInfo.path,
+          remoteName: 'origin',
+        }
+      );
+
+      setFetchProgress({
+        current: result.objects_received,
+        total: result.objects_received,
+        message: result.message,
+      });
+      setFetchComplete(true);
+      
+      // Refresh the UI after fetch
+      setTimeout(() => {
+        handleBranchChange();
+      }, 500);
+    } catch (err) {
+      setFetchError(err as string);
+      console.error('Fetch failed:', err);
+    } finally {
+      setFetchInProgress(false);
+    }
+  };
+
   const handleBranchAction = (action: 'create' | 'rename' | 'delete', branchName?: string) => {
     setBranchModalMode(action);
     setSelectedBranch(branchName);
@@ -664,6 +708,25 @@ function App() {
                     currentBranch={repoInfo.current_branch}
                     onRefresh={handleBranchChange}
                   />
+                  {/* Fetch Button */}
+                  <button
+                    onClick={handleFetch}
+                    disabled={fetchInProgress}
+                    className="px-3 py-1.5 text-xs bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 disabled:bg-zinc-900 disabled:text-zinc-600 rounded-lg font-medium transition-all duration-200 flex items-center gap-1.5"
+                    title="Fetch updates from remote"
+                  >
+                    {fetchInProgress ? (
+                      <>
+                        <span className="animate-spin">⟳</span>
+                        <span>Fetching...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>↻</span>
+                        <span>Fetch</span>
+                      </>
+                    )}
+                  </button>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -847,6 +910,24 @@ function App() {
           <span className="text-zinc-600">Ready</span>
         </div>
       </footer>
+
+      {/* Progress Toast for Fetch/Pull/Push Operations */}
+      {(fetchInProgress || fetchComplete || fetchError) && (
+        <ProgressToast
+          operation="fetch"
+          stage={fetchProgress.message}
+          progress={fetchProgress.total > 0 ? (fetchProgress.current / fetchProgress.total) * 100 : 0}
+          current={fetchProgress.current}
+          total={fetchProgress.total}
+          isComplete={fetchComplete}
+          isError={!!fetchError}
+          message={fetchError || fetchProgress.message}
+          onClose={() => {
+            setFetchComplete(false);
+            setFetchError(null);
+          }}
+        />
+      )}
     </div>
   );
 }

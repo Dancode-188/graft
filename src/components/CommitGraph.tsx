@@ -4,7 +4,6 @@ import {
   calculateGraphLayout,
   getEdgePaths,
   getBranchColor,
-  GraphLayout,
 } from '../utils/graphLayout';
 
 interface CommitGraphProps {
@@ -169,8 +168,8 @@ export const CommitGraph: React.FC<CommitGraphProps> = React.memo(({
       if (!node || commit.branches.length === 0) return null;
 
       // Separate local and remote branches
-      const localBranches = commit.branches.filter(b => !b.is_remote);
-      const remoteBranches = commit.branches.filter(b => b.is_remote);
+      const localBranches = commit.branches.filter((b: { is_remote: boolean }) => !b.is_remote);
+      const remoteBranches = commit.branches.filter((b: { is_remote: boolean }) => b.is_remote);
       const branches = [...localBranches, ...remoteBranches]; // Local first
 
       // Position labels to the right of the commit dot
@@ -230,8 +229,8 @@ export const CommitGraph: React.FC<CommitGraphProps> = React.memo(({
       if (!node || !commit.tags || commit.tags.length === 0) return null;
 
       // Separate local and remote tags
-      const localTags = commit.tags.filter(t => !t.is_remote);
-      const remoteTags = commit.tags.filter(t => t.is_remote);
+      const localTags = commit.tags.filter((t: { is_remote: boolean }) => !t.is_remote);
+      const remoteTags = commit.tags.filter((t: { is_remote: boolean }) => t.is_remote);
       const tags = [...localTags, ...remoteTags];
 
       // Calculate how many branches this commit has

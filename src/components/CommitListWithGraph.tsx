@@ -13,7 +13,6 @@ export const CommitListWithGraph: React.FC<CommitListWithGraphProps> = ({
   selectedCommit,
   onSelectCommit,
 }) => {
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const graphScrollRef = useRef<HTMLDivElement>(null);
   const listScrollRef = useRef<HTMLDivElement>(null);
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: 20 });

@@ -29,7 +29,7 @@ export const GraphStats: React.FC<GraphStatsProps> = ({ commits, repoName }) => 
     const localSet = new Set<string>();
 
     commits.forEach(commit => {
-      commit.branches.forEach(branch => {
+      commit.branches.forEach((branch: { name: string; is_remote: boolean }) => {
         branchSet.add(branch.name);
         if (branch.is_remote) {
           remoteSet.add(branch.name);

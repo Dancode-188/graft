@@ -68,6 +68,24 @@ struct RemoteStatus {
     up_to_date: bool,
 }
 
+#[derive(Debug, Serialize, Clone)]
+struct FetchProgress {
+    stage: String,
+    received_objects: u32,
+    total_objects: u32,
+    received_bytes: usize,
+    indexed_deltas: u32,
+    total_deltas: u32,
+}
+
+#[derive(Debug, Serialize)]
+struct FetchResult {
+    success: bool,
+    bytes_received: usize,
+    objects_received: usize,
+    message: String,
+}
+
 #[derive(Debug, Serialize)]
 struct CommitResult {
     success: bool,
@@ -1077,6 +1095,69 @@ fn get_remote_status(path: String, branch_name: String) -> Result<RemoteStatus, 
     })
 }
 
+#[tauri::command]
+fn fetch_from_remote(path: String, remote_name: String) -> Result<FetchResult, String> {
+    use git2::{FetchOptions, RemoteCallbacks};
+    use std::sync::{Arc, Mutex};
+
+    // Open the repository
+    let repo = Repository::open(&path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    // Find the remote
+    let mut remote = repo.find_remote(&remote_name)
+        .map_err(|e| format!("Remote '{}' not found: {}", remote_name, e))?;
+
+    // Track progress
+    let total_objects = Arc::new(Mutex::new(0u32));
+    let received_objects = Arc::new(Mutex::new(0u32));
+    let received_bytes = Arc::new(Mutex::new(0usize));
+    let indexed_deltas = Arc::new(Mutex::new(0u32));
+    let total_deltas = Arc::new(Mutex::new(0u32));
+
+    let total_objects_clone = Arc::clone(&total_objects);
+    let received_objects_clone = Arc::clone(&received_objects);
+    let received_bytes_clone = Arc::clone(&received_bytes);
+    let indexed_deltas_clone = Arc::clone(&indexed_deltas);
+    let total_deltas_clone = Arc::clone(&total_deltas);
+
+    // Set up callbacks
+    let mut callbacks = RemoteCallbacks::new();
+    
+    callbacks.transfer_progress(move |stats| {
+        *total_objects_clone.lock().unwrap() = stats.total_objects() as u32;
+        *received_objects_clone.lock().unwrap() = stats.received_objects() as u32;
+        *received_bytes_clone.lock().unwrap() = stats.received_bytes();
+        *indexed_deltas_clone.lock().unwrap() = stats.indexed_deltas() as u32;
+        *total_deltas_clone.lock().unwrap() = stats.total_deltas() as u32;
+        true
+    });
+
+    // Credentials callback - try SSH agent
+    callbacks.credentials(|_url, username_from_url, _allowed_types| {
+        git2::Cred::ssh_key_from_agent(username_from_url.unwrap_or("git"))
+    });
+
+    // Set up fetch options
+    let mut fetch_options = FetchOptions::new();
+    fetch_options.remote_callbacks(callbacks);
+
+    // Fetch all refs (connection happens automatically)
+    remote.fetch(&["refs/heads/*:refs/remotes/origin/*"], Some(&mut fetch_options), None)
+        .map_err(|e| format!("Failed to fetch from remote: {}", e))?;
+
+    // Get final stats
+    let final_objects = *received_objects.lock().unwrap();
+    let final_bytes = *received_bytes.lock().unwrap();
+
+    Ok(FetchResult {
+        success: true,
+        bytes_received: final_bytes,
+        objects_received: final_objects as usize,
+        message: format!("Fetched {} objects ({} bytes)", final_objects, final_bytes),
+    })
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -1098,7 +1179,8 @@ pub fn run() {
             switch_branch,
             delete_branch,
             rename_branch,
-            get_remote_status
+            get_remote_status,
+            fetch_from_remote
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
