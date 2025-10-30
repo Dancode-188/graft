@@ -115,7 +115,7 @@ export const CommitListWithGraph: React.FC<CommitListWithGraphProps> = ({
       <div
         ref={graphScrollRef}
         className="overflow-y-auto overflow-x-auto border-r border-zinc-800 bg-zinc-950"
-        style={{ flex: '0 0 450px', height: '100%', minHeight: 0 }}
+        style={{ flex: '0 0 300px', height: '100%', minHeight: 0 }}
       >
         <CommitGraph
           commits={commits}

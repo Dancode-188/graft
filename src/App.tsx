@@ -418,7 +418,7 @@ function App() {
       if ((e.metaKey || e.ctrlKey) && e.key === "b") {
         e.preventDefault();
         if (repoInfo) {
-          setShowBranchSidebar((prev) => !prev);
+          setShowBranchSidebar((prev: boolean) => !prev);
         }
       }
 
