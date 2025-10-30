@@ -52,23 +52,24 @@ export function RebaseCommitItem({
 
       {/* Commit Row */}
       <div
-        draggable
-        onDragStart={handleDragStart}
         onDragOver={handleDragOver}
-        onDragEnd={onDragEnd}
         onDrop={handleDrop}
         className={`
           group relative flex items-center gap-3 px-3 py-2.5
           bg-zinc-800/50 hover:bg-zinc-800 
           border border-zinc-700 rounded-lg
           transition-all duration-200
-          cursor-move
           ${isDragging ? "opacity-40 scale-95" : "opacity-100 scale-100"}
           ${isDropTarget ? "ring-2 ring-graft-green" : ""}
         `}
       >
         {/* Drag Handle */}
-        <div className="flex-shrink-0 text-zinc-500 group-hover:text-zinc-300 transition-colors">
+        <div 
+          draggable
+          onDragStart={handleDragStart}
+          onDragEnd={onDragEnd}
+          className="flex-shrink-0 text-zinc-500 group-hover:text-zinc-300 transition-colors cursor-grab active:cursor-grabbing"
+        >
           <svg
             width="16"
             height="16"
@@ -86,6 +87,7 @@ export function RebaseCommitItem({
         <select
           value={commit.action}
           onChange={(e) => onActionChange(index, e.target.value as RebaseAction)}
+          onMouseDown={(e) => e.stopPropagation()}
           className={`
             flex-shrink-0 px-2 py-1 text-xs font-medium rounded
             bg-zinc-900 border border-zinc-700
