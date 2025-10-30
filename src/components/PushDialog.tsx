@@ -1,11 +1,5 @@
 import { useState, useEffect } from 'react';
-
-interface Commit {
-  hash: string;
-  message: string;
-  author: string;
-  timestamp: number;
-}
+import { Commit } from '../App';
 
 interface PushDialogProps {
   remoteName: string;
@@ -113,7 +107,7 @@ export function PushDialog({
                     <div key={commit.hash} className="text-xs">
                       <div className="font-mono text-graft-400">• {commit.message}</div>
                       <div className="text-zinc-600 ml-3">
-                        {commit.author} • {new Date(commit.timestamp * 1000).toLocaleDateString()}
+                        {commit.author_name} • {new Date(commit.timestamp * 1000).toLocaleDateString()}
                       </div>
                     </div>
                   ))}

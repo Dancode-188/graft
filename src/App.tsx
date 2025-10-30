@@ -1140,7 +1140,6 @@ function App() {
                   onSelectCommit={handleSelectCommit}
                   onCommitContextMenu={handleCommitContextMenu}
                 />
-                />
               ) : (
                 <div className="flex-1 flex items-center justify-center text-zinc-500">
                   No commits found in this repository
