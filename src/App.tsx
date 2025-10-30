@@ -13,6 +13,15 @@ import { ProgressToast } from "./components/ProgressToast";
 import { PullDialog } from "./components/PullDialog";
 import { PushDialog } from "./components/PushDialog";
 import { ConflictNotification } from "./components/ConflictNotification";
+import { 
+  InteractiveRebaseModal,
+  RebasePreviewModal,
+  RebaseProgressModal,
+  RebaseConflictModal,
+  RebaseInstruction,
+  RebasePlan,
+  RebaseResult
+} from "./components/rebase";
 
 interface RepoInfo {
   name: string;
@@ -413,6 +422,21 @@ function App() {
   const [pushError, setPushError] = useState<string | null>(null);
   const [commitsToPush, setCommitsToPush] = useState<Commit[]>([]);
   
+  // Interactive Rebase state
+  const [rebaseModalOpen, setRebaseModalOpen] = useState(false);
+  const [rebaseBaseCommit, setRebaseBaseCommit] = useState<string | null>(null);
+  const [rebasePreviewOpen, setRebasePreviewOpen] = useState(false);
+  const [rebasePreviewPlan, setRebasePreviewPlan] = useState<RebasePlan | null>(null);
+  const [rebaseInstructions, setRebaseInstructions] = useState<RebaseInstruction[]>([]);
+  const [rebaseProgressOpen, setRebaseProgressOpen] = useState(false);
+  const [rebaseProgress, setRebaseProgress] = useState({ current: 0, total: 0, message: '' });
+  const [rebaseConflictOpen, setRebaseConflictOpen] = useState(false);
+  const [rebaseConflicts, setRebaseConflicts] = useState<Array<{ path: string; conflict_type: string }>>([]);
+  const [rebaseCurrentCommit, setRebaseCurrentCommit] = useState<string | null>(null);
+  
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; commit: Commit } | null>(null);
+  
   const listContainerRef = useRef<HTMLDivElement>(null);
 
   // Save branch sidebar state to localStorage whenever it changes
@@ -487,6 +511,20 @@ function App() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [repoInfo, commits.length, selectedCommitIndex, searchOpen]);
+
+  // Close context menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (contextMenu) {
+        setContextMenu(null);
+      }
+    };
+
+    if (contextMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [contextMenu]);
 
   // Scroll selected commit into view
   useEffect(() => {
@@ -775,6 +813,141 @@ function App() {
     setBranchModalOpen(true);
   };
 
+  // Interactive Rebase Handlers
+  const handleOpenRebaseModal = (baseCommit: string) => {
+    setRebaseBaseCommit(baseCommit);
+    setRebaseModalOpen(true);
+  };
+
+  const handleStartRebase = async (instructions: RebaseInstruction[]) => {
+    if (!repoInfo || !rebaseBaseCommit) return;
+
+    // First, prepare and preview the rebase
+    try {
+      const plan = await invoke<RebasePlan>('prepare_interactive_rebase', {
+        path: repoInfo.path,
+        baseCommit: rebaseBaseCommit,
+        instructions,
+      });
+
+      setRebasePreviewPlan(plan);
+      setRebaseInstructions(instructions);
+      setRebaseModalOpen(false);
+      setRebasePreviewOpen(true);
+    } catch (err) {
+      console.error('Failed to prepare rebase:', err);
+      alert(`Failed to prepare rebase: ${err}`);
+    }
+  };
+
+  const handleConfirmRebase = async () => {
+    if (!repoInfo || !rebaseBaseCommit || rebaseInstructions.length === 0) return;
+
+    setRebasePreviewOpen(false);
+    setRebaseProgressOpen(true);
+    setRebaseProgress({ current: 0, total: rebaseInstructions.length, message: 'Starting rebase...' });
+
+    try {
+      const result = await invoke<RebaseResult>('start_interactive_rebase', {
+        path: repoInfo.path,
+        baseCommit: rebaseBaseCommit,
+        instructions: rebaseInstructions,
+      });
+
+      if (result.success) {
+        // Rebase completed successfully
+        setRebaseProgress({
+          current: result.total_commits,
+          total: result.total_commits,
+          message: result.message,
+        });
+        
+        // Refresh commits after successful rebase
+        setTimeout(() => {
+          setRebaseProgressOpen(false);
+          handleBranchChange();
+        }, 2000);
+      } else if (result.conflicts.length > 0) {
+        // Conflicts detected
+        setRebaseProgressOpen(false);
+        setRebaseConflicts(result.conflicts);
+        setRebaseCurrentCommit(result.message);
+        setRebaseConflictOpen(true);
+      }
+    } catch (err) {
+      console.error('Rebase failed:', err);
+      setRebaseProgressOpen(false);
+      alert(`Rebase failed: ${err}`);
+    }
+  };
+
+  const handleContinueRebase = async () => {
+    if (!repoInfo) return;
+
+    setRebaseConflictOpen(false);
+    setRebaseProgressOpen(true);
+
+    try {
+      const result = await invoke<RebaseResult>('continue_rebase', {
+        path: repoInfo.path,
+      });
+
+      if (result.success) {
+        // Rebase continued and completed
+        setTimeout(() => {
+          setRebaseProgressOpen(false);
+          handleBranchChange();
+        }, 2000);
+      } else if (result.conflicts.length > 0) {
+        // More conflicts detected
+        setRebaseProgressOpen(false);
+        setRebaseConflicts(result.conflicts);
+        setRebaseConflictOpen(true);
+      }
+    } catch (err) {
+      console.error('Continue rebase failed:', err);
+      setRebaseProgressOpen(false);
+      alert(`Failed to continue rebase: ${err}`);
+    }
+  };
+
+  const handleAbortRebase = async () => {
+    if (!repoInfo) return;
+
+    try {
+      await invoke('abort_rebase', {
+        path: repoInfo.path,
+      });
+
+      // Close all rebase modals
+      setRebaseModalOpen(false);
+      setRebasePreviewOpen(false);
+      setRebaseProgressOpen(false);
+      setRebaseConflictOpen(false);
+      
+      // Refresh the UI
+      handleBranchChange();
+    } catch (err) {
+      console.error('Abort rebase failed:', err);
+      alert(`Failed to abort rebase: ${err}`);
+    }
+  };
+
+  const handleCommitContextMenu = (commit: Commit, x: number, y: number) => {
+    setContextMenu({ x, y, commit });
+  };
+
+  const handleContextMenuAction = (action: 'rebase') => {
+    if (!contextMenu) return;
+
+    if (action === 'rebase') {
+      // Start interactive rebase from the selected commit
+      handleOpenRebaseModal(contextMenu.commit.hash);
+    }
+
+    setContextMenu(null);
+  };
+
   return (
     <div className="flex flex-col h-screen bg-zinc-950 text-zinc-100">
       {/* Header */}
@@ -965,6 +1138,8 @@ function App() {
                   commits={commits}
                   selectedCommit={selectedCommit}
                   onSelectCommit={handleSelectCommit}
+                  onCommitContextMenu={handleCommitContextMenu}
+                />
                 />
               ) : (
                 <div className="flex-1 flex items-center justify-center text-zinc-500">
@@ -1085,10 +1260,74 @@ function App() {
         onSelect={handleSelectCommit}
       />
 
+      {/* Context Menu for Commits */}
+      {contextMenu && (
+        <div
+          className="fixed z-50 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl py-1 min-w-[200px]"
+          style={{
+            left: `${contextMenu.x}px`,
+            top: `${contextMenu.y}px`,
+          }}
+        >
+          <button
+            onClick={() => handleContextMenuAction('rebase')}
+            className="w-full px-4 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+          >
+            <span>🔀</span>
+            <span>Interactive Rebase from Here</span>
+          </button>
+        </div>
+      )}
+
+      {/* Interactive Rebase Modal */}
+      {repoInfo && rebaseModalOpen && rebaseBaseCommit && (
+        <InteractiveRebaseModal
+          repoPath={repoInfo.path}
+          baseCommit={rebaseBaseCommit}
+          onClose={() => setRebaseModalOpen(false)}
+          onStartRebase={handleStartRebase}
+        />
+      )}
+
+      {/* Rebase Preview Modal */}
+      {rebasePreviewOpen && rebasePreviewPlan && (
+        <RebasePreviewModal
+          plan={rebasePreviewPlan}
+          onBack={() => {
+            setRebasePreviewOpen(false);
+            setRebaseModalOpen(true);
+          }}
+          onConfirm={handleConfirmRebase}
+        />
+      )}
+
+      {/* Rebase Progress Modal */}
+      {rebaseProgressOpen && (
+        <RebaseProgressModal
+          currentIndex={rebaseProgress.current}
+          totalCommits={rebaseProgress.total}
+          currentCommitMessage={rebaseProgress.message}
+          isComplete={rebaseProgress.current >= rebaseProgress.total}
+          onAbort={handleAbortRebase}
+        />
+      )}
+
+      {/* Rebase Conflict Modal */}
+      {rebaseConflictOpen && (
+        <RebaseConflictModal
+          currentIndex={rebaseProgress.current}
+          totalCommits={rebaseProgress.total}
+          currentCommitMessage={rebaseCurrentCommit || undefined}
+          conflicts={rebaseConflicts}
+          onContinue={handleContinueRebase}
+          onAbort={handleAbortRebase}
+        />
+      )}
+
       {/* Status Bar */}
       <footer className="px-6 py-2 border-t border-zinc-800 bg-zinc-900 text-xs text-zinc-500 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <span>Phase 5: Branching 🔀 ✅</span>
+          <span>Phase 7: Interactive Rebase 🎯 (In Progress)</span>
           {commits.length > 0 && (
             <>
               <span className="text-zinc-600">│</span>

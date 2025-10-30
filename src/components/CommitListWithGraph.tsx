@@ -6,12 +6,14 @@ interface CommitListWithGraphProps {
   commits: Commit[];
   selectedCommit: Commit | null;
   onSelectCommit: (commit: Commit) => void;
+  onCommitContextMenu?: (commit: Commit, x: number, y: number) => void;
 }
 
 export const CommitListWithGraph: React.FC<CommitListWithGraphProps> = ({
   commits,
   selectedCommit,
   onSelectCommit,
+  onCommitContextMenu,
 }) => {
   const graphScrollRef = useRef<HTMLDivElement>(null);
   const listScrollRef = useRef<HTMLDivElement>(null);
@@ -143,6 +145,12 @@ export const CommitListWithGraph: React.FC<CommitListWithGraphProps> = ({
               <div
                 key={commit.hash}
                 onClick={() => onSelectCommit(commit)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  if (onCommitContextMenu) {
+                    onCommitContextMenu(commit, e.clientX, e.clientY);
+                  }
+                }}
                 className={`bg-zinc-900 border rounded-lg p-4 transition-all duration-200 cursor-pointer ${
                   isSelected
                     ? 'border-graft-500 bg-zinc-800 ring-2 ring-graft-500/50 shadow-lg shadow-graft-500/20'

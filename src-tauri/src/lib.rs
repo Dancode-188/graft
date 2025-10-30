@@ -1826,7 +1826,8 @@ fn start_interactive_rebase(
     let base_oid = git2::Oid::from_str(&base_commit)
         .map_err(|e| format!("Invalid base commit hash: {}", e))?;
     
-    let base_commit_obj = repo.find_commit(base_oid)
+    // Validate that the base commit exists
+    let _base_commit_obj = repo.find_commit(base_oid)
         .map_err(|e| format!("Failed to find base commit: {}", e))?;
 
     // Create an annotated commit for the base
@@ -2082,8 +2083,6 @@ fn abort_rebase(path: String) -> Result<String, String> {
 /// Continue an in-progress rebase after conflicts have been resolved
 #[tauri::command]
 fn continue_rebase(path: String) -> Result<RebaseResult, String> {
-    use git2::RebaseOptions;
-
     // Open the repository
     let repo = Repository::open(&path)
         .map_err(|e| format!("Failed to open repository: {}", e))?;
@@ -2200,7 +2199,7 @@ fn get_rebase_status(path: String) -> Result<Option<RebaseStatus>, String> {
     }
 
     // Try to open the rebase to get info
-    let rebase = match repo.open_rebase(None) {
+    let mut rebase = match repo.open_rebase(None) {
         Ok(r) => r,
         Err(_) => {
             // Rebase state exists but can't open - return minimal info
@@ -2233,15 +2232,19 @@ fn get_rebase_status(path: String) -> Result<Option<RebaseStatus>, String> {
         vec![]
     };
 
-    // Get onto commit (the commit we're rebasing onto)
-    let onto_commit = rebase.onto_id()
-        .map(|oid| oid.to_string())
-        .unwrap_or_else(|| String::new());
+    // Try to read onto commit from rebase state files
+    let onto_commit = std::fs::read_to_string(format!("{}/.git/rebase-merge/onto", path))
+        .or_else(|_| std::fs::read_to_string(format!("{}/.git/rebase-apply/onto", path)))
+        .unwrap_or_else(|_| String::new())
+        .trim()
+        .to_string();
 
-    // Get original HEAD (where we started)
-    let original_head = rebase.orig_head_id()
-        .map(|oid| oid.to_string())
-        .unwrap_or_else(|| String::new());
+    // Try to read original HEAD from rebase state files
+    let original_head = std::fs::read_to_string(format!("{}/.git/rebase-merge/orig-head", path))
+        .or_else(|_| std::fs::read_to_string(format!("{}/.git/rebase-apply/orig-head", path)))
+        .unwrap_or_else(|_| String::new())
+        .trim()
+        .to_string();
 
     Ok(Some(RebaseStatus {
         is_in_progress: true,
@@ -2320,10 +2323,10 @@ fn validate_rebase_order(
 
     // Warn about extensive reordering (might cause conflicts)
     let original_order: Vec<String> = instructions.iter().map(|i| i.hash.clone()).collect();
-    let mut sorted_order = original_order.clone();
+    let _sorted_order = original_order.clone();
     
     // Try to open repo to check original order
-    if let Ok(repo) = Repository::open(&path) {
+    if let Ok(_repo) = Repository::open(&path) {
         // If we can get the actual order, check against it
         // For now, just warn if there are many operations
         let action_counts: std::collections::HashMap<&str, usize> = 
@@ -2339,7 +2342,7 @@ fn validate_rebase_order(
             ));
         }
 
-        if action_counts.get("squash").unwrap_or(&0) + action_counts.get("fixup").unwrap_or(&0) > &5 {
+        if action_counts.get("squash").unwrap_or(&0) + action_counts.get("fixup").unwrap_or(&0) > 5 {
             warnings.push(
                 "Squashing/fixuping many commits. Review carefully to ensure commit messages are meaningful.".to_string()
             );
@@ -2383,7 +2386,7 @@ fn validate_rebase_order(
 #[tauri::command]
 fn prepare_interactive_rebase(
     path: String,
-    base_commit: String,
+    _base_commit: String,
     instructions: Vec<RebaseInstruction>,
 ) -> Result<RebasePlan, String> {
     // Validate the instructions first
