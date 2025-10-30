@@ -27,36 +27,33 @@ export function RebaseCommitItem({
   const isDropTarget = dragOverIndex === index;
 
   const handleDragStart = (e: React.DragEvent) => {
+    console.log(`✅ DRAGSTART on commit ${index}`, { hash: commit.short_hash });
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", index.toString());
+    // Hide the default drag ghost
+    const img = new Image();
+    img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+    e.dataTransfer.setDragImage(img, 0, 0);
     onDragStart(index);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
-    if (e.preventDefault) {
-      e.preventDefault();
-    }
+    console.log(`🔥 DRAGOVER on commit ${index}`, { target: e.currentTarget });
+    e.preventDefault();
     e.dataTransfer.dropEffect = "move";
     onDragOver(index);
-    return false;
   };
 
   const handleDragEnter = (e: React.DragEvent) => {
-    if (e.preventDefault) {
-      e.preventDefault();
-    }
-    return false;
+    console.log(`👋 DRAGENTER on commit ${index}`);
+    e.preventDefault();
   };
 
   const handleDrop = (e: React.DragEvent) => {
-    if (e.stopPropagation) {
-      e.stopPropagation();
-    }
-    if (e.preventDefault) {
-      e.preventDefault();
-    }
+    console.log(`🎯 DROP on commit ${index}`);
+    e.preventDefault();
+    e.stopPropagation();
     onDrop(index);
-    return false;
   };
 
   return (
@@ -86,8 +83,18 @@ export function RebaseCommitItem({
           draggable={true}
           onDragStart={handleDragStart}
           onDragEnd={onDragEnd}
+          onDragOver={(e) => { 
+            console.log('⚠️ DragOver hit the handle, stopping propagation');
+            e.stopPropagation(); 
+            e.preventDefault();
+          }}
+          onDrop={(e) => { 
+            console.log('⚠️ Drop hit the handle, stopping propagation');
+            e.stopPropagation(); 
+            e.preventDefault();
+          }}
           className="flex-shrink-0 text-zinc-500 group-hover:text-zinc-300 transition-colors cursor-grab active:cursor-grabbing select-none"
-          style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
+          style={{ userSelect: 'none', WebkitUserSelect: 'none', pointerEvents: 'auto' }}
         >
           <svg
             width="16"
@@ -96,6 +103,7 @@ export function RebaseCommitItem({
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
+            style={{ pointerEvents: 'none' }}
           >
             <line x1="4" y1="6" x2="12" y2="6" />
             <line x1="4" y1="10" x2="12" y2="10" />
@@ -114,6 +122,7 @@ export function RebaseCommitItem({
             hover:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-graft-green
             transition-all cursor-pointer
           `}
+          style={{ pointerEvents: 'auto' }}
         >
           {(Object.keys(ACTION_METADATA) as RebaseAction[]).map((action) => (
             <option key={action} value={action}>
@@ -123,7 +132,7 @@ export function RebaseCommitItem({
         </select>
 
         {/* Commit Info */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0" style={{ pointerEvents: 'none' }}>
           <div className="flex items-baseline gap-2">
             <span className="font-mono text-xs text-zinc-500">
               {commit.short_hash}
@@ -141,6 +150,7 @@ export function RebaseCommitItem({
         <div
           className={`flex-shrink-0 text-lg ${actionMeta.color}`}
           title={actionMeta.description}
+          style={{ pointerEvents: 'none' }}
         >
           {actionMeta.icon}
         </div>
