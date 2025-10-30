@@ -29,29 +29,34 @@ export function RebaseCommitItem({
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", index.toString());
-    // Prevent default drag image (we'll use CSS for visual feedback)
-    const img = new Image();
-    img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-    e.dataTransfer.setDragImage(img, 0, 0);
     onDragStart(index);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+    if (e.preventDefault) {
+      e.preventDefault();
+    }
     e.dataTransfer.dropEffect = "move";
     onDragOver(index);
+    return false;
   };
 
   const handleDragEnter = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+    if (e.preventDefault) {
+      e.preventDefault();
+    }
+    return false;
   };
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+    if (e.stopPropagation) {
+      e.stopPropagation();
+    }
+    if (e.preventDefault) {
+      e.preventDefault();
+    }
     onDrop(index);
+    return false;
   };
 
   return (
@@ -66,23 +71,23 @@ export function RebaseCommitItem({
         onDragOver={handleDragOver}
         onDragEnter={handleDragEnter}
         onDrop={handleDrop}
+        style={{ userSelect: 'none' }}
         className={`
           group relative flex items-center gap-3 px-3 py-2.5
           bg-zinc-800/50 hover:bg-zinc-800 
           border border-zinc-700 rounded-lg
-          transition-all duration-200
-          ${isDragging ? "opacity-40 scale-95" : "opacity-100 scale-100"}
+          transition-all duration-200 select-none
+          ${isDragging ? "opacity-40 scale-95 pointer-events-none" : "opacity-100 scale-100"}
           ${isDropTarget ? "ring-2 ring-graft-green" : ""}
         `}
       >
         {/* Drag Handle */}
         <div 
-          draggable
+          draggable={true}
           onDragStart={handleDragStart}
           onDragEnd={onDragEnd}
-          onDragOver={(e) => e.stopPropagation()}
-          onDrop={(e) => e.stopPropagation()}
-          className="flex-shrink-0 text-zinc-500 group-hover:text-zinc-300 transition-colors cursor-grab active:cursor-grabbing"
+          className="flex-shrink-0 text-zinc-500 group-hover:text-zinc-300 transition-colors cursor-grab active:cursor-grabbing select-none"
+          style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
         >
           <svg
             width="16"

@@ -188,8 +188,6 @@ export function InteractiveRebaseModal({
         {/* Commits List */}
         <div 
           className="flex-1 overflow-y-auto p-6 space-y-2"
-          onDragOver={(e) => e.preventDefault()}
-          onDragEnter={(e) => e.preventDefault()}
         >
           {commits.map((commit, index) => (
             <RebaseCommitItem
