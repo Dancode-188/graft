@@ -29,17 +29,28 @@ export function RebaseCommitItem({
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", index.toString());
+    // Prevent default drag image (we'll use CSS for visual feedback)
+    const img = new Image();
+    img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+    e.dataTransfer.setDragImage(img, 0, 0);
     onDragStart(index);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     e.dataTransfer.dropEffect = "move";
     onDragOver(index);
   };
 
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     onDrop(index);
   };
 
@@ -53,6 +64,7 @@ export function RebaseCommitItem({
       {/* Commit Row */}
       <div
         onDragOver={handleDragOver}
+        onDragEnter={handleDragEnter}
         onDrop={handleDrop}
         className={`
           group relative flex items-center gap-3 px-3 py-2.5
@@ -68,6 +80,8 @@ export function RebaseCommitItem({
           draggable
           onDragStart={handleDragStart}
           onDragEnd={onDragEnd}
+          onDragOver={(e) => e.stopPropagation()}
+          onDrop={(e) => e.stopPropagation()}
           className="flex-shrink-0 text-zinc-500 group-hover:text-zinc-300 transition-colors cursor-grab active:cursor-grabbing"
         >
           <svg
