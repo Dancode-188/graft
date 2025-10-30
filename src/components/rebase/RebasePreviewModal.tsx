@@ -112,13 +112,13 @@ export function RebasePreviewModal({
         <div className="flex items-center justify-end gap-3 p-6 border-t border-zinc-800 bg-zinc-900">
           <button
             onClick={onBack}
-            className="px-4 py-2 text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition-all"
           >
             Back to Edit
           </button>
           <button
             onClick={onConfirm}
-            className="px-6 py-2 text-sm font-medium bg-graft-green text-zinc-900 rounded-lg hover:bg-green-400 transition-all"
+            className="px-6 py-2 text-sm font-semibold bg-graft-500 text-zinc-900 rounded-lg hover:bg-graft-400 shadow-lg shadow-graft-500/20 transition-all"
           >
             Start Rebase
           </button>

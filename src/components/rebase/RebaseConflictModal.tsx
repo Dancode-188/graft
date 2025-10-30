@@ -91,7 +91,7 @@ export function RebaseConflictModal({
           </button>
           <button
             onClick={onContinue}
-            className="px-6 py-2 text-sm font-medium bg-graft-green text-zinc-900 rounded-lg hover:bg-green-400 transition-all"
+            className="px-6 py-2 text-sm font-semibold bg-graft-500 text-zinc-900 rounded-lg hover:bg-graft-400 shadow-lg shadow-graft-500/20 transition-all"
           >
             Mark as Resolved & Continue
           </button>

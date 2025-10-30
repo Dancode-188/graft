@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { RebaseCommitItem } from "./RebaseCommitItem";
+import { RebasePreviewModal } from "./RebasePreviewModal";
 import {
   RebaseCommit,
   RebaseAction,
   RebaseInstruction,
   ValidationResult,
+  RebasePlan,
 } from "./types";
 
 interface InteractiveRebaseModalProps {
@@ -27,6 +29,7 @@ export function InteractiveRebaseModal({
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   // Load commits on mount
   useEffect(() => {
@@ -118,6 +121,32 @@ export function InteractiveRebaseModal({
     onStartRebase(instructions);
   };
 
+  const handlePreview = () => {
+    setShowPreview(true);
+  };
+
+  const generateRebasePlan = (): RebasePlan => {
+    const actionsSummary: Record<string, number> = {
+      pick: 0,
+      squash: 0,
+      fixup: 0,
+      reword: 0,
+      drop: 0,
+      edit: 0,
+    };
+
+    commits.forEach((commit) => {
+      actionsSummary[commit.action] = (actionsSummary[commit.action] || 0) + 1;
+    });
+
+    return {
+      total_commits: commits.length,
+      actions_summary: actionsSummary,
+      warnings: validation?.warnings || [],
+      can_proceed: validation?.is_valid ?? false,
+    };
+  };
+
   const canProceed = validation?.is_valid ?? false;
 
   if (loading) {
@@ -188,6 +217,11 @@ export function InteractiveRebaseModal({
         {/* Commits List */}
         <div 
           className="flex-1 overflow-y-auto p-6 space-y-2"
+          onDragOver={(e) => { 
+            console.log('🌊 DRAGOVER on parent container');
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+          }}
         >
           {commits.map((commit, index) => (
             <RebaseCommitItem
@@ -239,29 +273,59 @@ export function InteractiveRebaseModal({
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-6 border-t border-zinc-800 bg-zinc-900">
+        <div className="flex items-center justify-between gap-3 p-6 border-t border-zinc-800 bg-zinc-900">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
+            className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition-all"
           >
             Cancel
           </button>
-          <button
-            onClick={handleStartRebase}
-            disabled={!canProceed}
-            className={`
-              px-6 py-2 text-sm font-medium rounded-lg transition-all
-              ${
-                canProceed
-                  ? "bg-graft-green text-zinc-900 hover:bg-green-400"
-                  : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
-              }
-            `}
-          >
-            Start Rebase
-          </button>
+          
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handlePreview}
+              disabled={!canProceed}
+              className={`
+                px-5 py-2 text-sm font-medium rounded-lg transition-all
+                ${
+                  canProceed
+                    ? "bg-graft-500/10 text-graft-500 border border-graft-500/30 hover:bg-graft-500/20 hover:border-graft-500/50"
+                    : "bg-zinc-800 text-zinc-500 border border-zinc-700 cursor-not-allowed"
+                }
+              `}
+            >
+              Preview
+            </button>
+            
+            <button
+              onClick={handleStartRebase}
+              disabled={!canProceed}
+              className={`
+                px-6 py-2 text-sm font-semibold rounded-lg transition-all
+                ${
+                  canProceed
+                    ? "bg-graft-500 text-zinc-900 hover:bg-graft-400 shadow-lg shadow-graft-500/20"
+                    : "bg-zinc-800 text-zinc-400 border-2 border-zinc-700 cursor-not-allowed"
+                }
+              `}
+            >
+              Start Rebase
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Preview Modal */}
+      {showPreview && (
+        <RebasePreviewModal
+          plan={generateRebasePlan()}
+          onBack={() => setShowPreview(false)}
+          onConfirm={() => {
+            setShowPreview(false);
+            handleStartRebase();
+          }}
+        />
+      )}
     </div>
   );
 }

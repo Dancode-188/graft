@@ -37,7 +37,7 @@ export function RebaseProgressModal({
               {/* Progress Bar */}
               <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden">
                 <div
-                  className="h-full bg-graft-green transition-all duration-300 ease-out"
+                  className="h-full bg-graft-500 transition-all duration-300 ease-out"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -57,7 +57,7 @@ export function RebaseProgressModal({
           {isComplete && (
             <div className="text-center">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-900/30 mb-4">
-                <span className="text-3xl text-graft-green">✓</span>
+                <span className="text-3xl text-graft-500">✓</span>
               </div>
               <p className="text-lg font-medium text-zinc-200 mb-2">
                 Rebase completed successfully!

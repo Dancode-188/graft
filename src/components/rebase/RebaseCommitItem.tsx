@@ -60,7 +60,7 @@ export function RebaseCommitItem({
     <>
       {/* Drop Zone Indicator */}
       {isDropTarget && (
-        <div className="h-1 bg-graft-green rounded-full mx-2 transition-all duration-200" />
+        <div className="h-1 bg-graft-500 rounded-full mx-2 transition-all duration-200" />
       )}
 
       {/* Commit Row */}
@@ -75,7 +75,7 @@ export function RebaseCommitItem({
           border border-zinc-700 rounded-lg
           transition-all duration-200 select-none
           ${isDragging ? "opacity-40 scale-95 pointer-events-none" : "opacity-100 scale-100"}
-          ${isDropTarget ? "ring-2 ring-graft-green" : ""}
+          ${isDropTarget ? "ring-2 ring-graft-500" : ""}
         `}
       >
         {/* Drag Handle */}
@@ -119,7 +119,7 @@ export function RebaseCommitItem({
             flex-shrink-0 px-2 py-1 text-xs font-medium rounded
             bg-zinc-900 border border-zinc-700
             ${actionMeta.color}
-            hover:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-graft-green
+            hover:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-graft-500
             transition-all cursor-pointer
           `}
           style={{ pointerEvents: 'auto' }}
