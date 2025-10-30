@@ -8,6 +8,7 @@ import { StagingArea } from "./components/staging/StagingArea";
 import { DiffViewer } from "./components/DiffViewer";
 import { BranchSidebar } from "./components/BranchSidebar";
 import { BranchModal } from "./components/BranchModal";
+import { RemoteStatusBar } from "./components/RemoteStatusBar";
 
 interface RepoInfo {
   name: string;
@@ -649,12 +650,21 @@ function App() {
             {/* Header Bar */}
             <div className="px-6 py-4 border-b border-zinc-800">
               <div className="flex items-center justify-between gap-4">
-                <h2 className="text-xl font-semibold">
-                  Commit History
-                  <span className="ml-3 text-sm text-zinc-500 font-normal">
-                    {commits.length} commits
-                  </span>
-                </h2>
+                <div className="flex items-center gap-4">
+                  <h2 className="text-xl font-semibold">
+                    Commit History
+                    <span className="ml-3 text-sm text-zinc-500 font-normal">
+                      {commits.length} commits
+                    </span>
+                  </h2>
+                  {/* Remote Status Bar */}
+                  <span className="text-zinc-600">│</span>
+                  <RemoteStatusBar
+                    repoPath={repoInfo.path}
+                    currentBranch={repoInfo.current_branch}
+                    onRefresh={handleBranchChange}
+                  />
+                </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setShowLegend(!showLegend)}

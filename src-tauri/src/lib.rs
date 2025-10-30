@@ -59,6 +59,16 @@ struct WorkingDirectoryStatus {
 }
 
 #[derive(Debug, Serialize)]
+struct RemoteStatus {
+    has_remote: bool,
+    remote_name: String,
+    remote_url: String,
+    ahead: usize,
+    behind: usize,
+    up_to_date: bool,
+}
+
+#[derive(Debug, Serialize)]
 struct CommitResult {
     success: bool,
     commit_hash: String,
@@ -998,6 +1008,75 @@ fn rename_branch(path: String, old_name: String, new_name: String) -> Result<Str
     Ok(format!("Branch '{}' renamed to '{}'", old_name, new_name))
 }
 
+#[tauri::command]
+fn get_remote_status(path: String, branch_name: String) -> Result<RemoteStatus, String> {
+    // Open the repository
+    let repo = Repository::open(&path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    // Get the branch
+    let branch = repo.find_branch(&branch_name, git2::BranchType::Local)
+        .map_err(|e| format!("Branch '{}' not found: {}", branch_name, e))?;
+
+    // Get the upstream branch
+    let upstream = match branch.upstream() {
+        Ok(upstream) => upstream,
+        Err(_) => {
+            // No upstream configured
+            return Ok(RemoteStatus {
+                has_remote: false,
+                remote_name: String::new(),
+                remote_url: String::new(),
+                ahead: 0,
+                behind: 0,
+                up_to_date: true,
+            });
+        }
+    };
+
+    // Get remote name and URL
+    let upstream_name = upstream.name()
+        .map_err(|_| "Invalid upstream branch name")?
+        .ok_or("Upstream branch name is not valid UTF-8")?;
+    
+    // Parse remote name from upstream (e.g., "origin/main" -> "origin")
+    let remote_name = upstream_name
+        .split('/')
+        .next()
+        .unwrap_or("origin")
+        .to_string();
+
+    // Get remote URL
+    let remote = repo.find_remote(&remote_name)
+        .map_err(|e| format!("Failed to find remote '{}': {}", remote_name, e))?;
+    
+    let remote_url = remote.url()
+        .ok_or("Remote URL is not valid UTF-8")?
+        .to_string();
+
+    // Get local and remote commit OIDs
+    let local_oid = branch.get().target()
+        .ok_or("Failed to get local branch target")?;
+    
+    let upstream_oid = upstream.get().target()
+        .ok_or("Failed to get upstream branch target")?;
+
+    // Calculate ahead/behind counts
+    let (ahead, behind) = repo.graph_ahead_behind(local_oid, upstream_oid)
+        .map_err(|e| format!("Failed to calculate ahead/behind: {}", e))?;
+
+    let up_to_date = ahead == 0 && behind == 0;
+
+    Ok(RemoteStatus {
+        has_remote: true,
+        remote_name,
+        remote_url,
+        ahead,
+        behind,
+        up_to_date,
+    })
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -1018,7 +1097,8 @@ pub fn run() {
             create_branch,
             switch_branch,
             delete_branch,
-            rename_branch
+            rename_branch,
+            get_remote_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
