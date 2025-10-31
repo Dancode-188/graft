@@ -2554,7 +2554,9 @@ fn list_stashes(path: String) -> Result<Vec<StashEntry>, String> {
         true // Continue iteration
     }).map_err(|e| format!("Failed to iterate stashes: {}", e))?;
 
-    Ok(Arc::try_unwrap(stashes).unwrap().into_inner().unwrap())
+    // Extract the data from the Arc<Mutex<Vec>> without unwrapping the Arc
+    // This avoids the Arc::try_unwrap issue when stashes_clone is still in scope
+    Ok(stashes.lock().unwrap().clone())
 }
 
 /// Create a new stash with the given options
