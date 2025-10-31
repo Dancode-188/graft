@@ -22,6 +22,7 @@ import {
   RebasePlan,
   RebaseResult
 } from "./components/rebase";
+import { StashPanel } from "./components/stash";
 
 interface RepoInfo {
   name: string;
@@ -396,6 +397,12 @@ function App() {
     const saved = localStorage.getItem('graft-show-branch-sidebar');
     return saved ? JSON.parse(saved) : false; // Default: collapsed
   });
+
+  // Stash sidebar collapsed by default, with localStorage persistence
+  const [showStashSidebar, setShowStashSidebar] = useState(() => {
+    const saved = localStorage.getItem('graft-show-stash-sidebar');
+    return saved ? JSON.parse(saved) : false; // Default: collapsed
+  });
   
   const [branchModalOpen, setBranchModalOpen] = useState(false);
   const [branchModalMode, setBranchModalMode] = useState<'create' | 'rename' | 'delete'>('create');
@@ -444,6 +451,11 @@ function App() {
     localStorage.setItem('graft-show-branch-sidebar', JSON.stringify(showBranchSidebar));
   }, [showBranchSidebar]);
 
+  // Save stash sidebar state to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('graft-show-stash-sidebar', JSON.stringify(showStashSidebar));
+  }, [showStashSidebar]);
+
   // Detect OS for keyboard shortcut display
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
   const shortcutKey = isMac ? '⌘' : 'Ctrl';
@@ -470,6 +482,14 @@ function App() {
         e.preventDefault();
         if (repoInfo) {
           setShowBranchSidebar((prev: boolean) => !prev);
+        }
+      }
+
+      // Cmd+Shift+S (Mac) or Ctrl+Shift+S (Windows/Linux) to toggle stash sidebar
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "S") {
+        e.preventDefault();
+        if (repoInfo) {
+          setShowStashSidebar((prev: boolean) => !prev);
         }
       }
 
@@ -960,17 +980,32 @@ function App() {
           
           {/* Branch Sidebar Toggle Button (only show when repo is open) */}
           {repoInfo && (
-            <button
-              onClick={() => setShowBranchSidebar(!showBranchSidebar)}
-              className={`ml-2 px-3 py-1.5 text-xs rounded transition-all ${
-                showBranchSidebar
-                  ? 'bg-graft-600/20 text-graft-400 border border-graft-600/30'
-                  : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:border-zinc-600 hover:text-zinc-300'
-              }`}
-              title={`${showBranchSidebar ? 'Hide' : 'Show'} Branches (${shortcutKey}+B)`}
-            >
-              🌿 Branches
-            </button>
+            <>
+              <button
+                onClick={() => setShowBranchSidebar(!showBranchSidebar)}
+                className={`ml-2 px-3 py-1.5 text-xs rounded transition-all ${
+                  showBranchSidebar
+                    ? 'bg-graft-600/20 text-graft-400 border border-graft-600/30'
+                    : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:border-zinc-600 hover:text-zinc-300'
+                }`}
+                title={`${showBranchSidebar ? 'Hide' : 'Show'} Branches (${shortcutKey}+B)`}
+              >
+                🌿 Branches
+              </button>
+
+              {/* Stash Sidebar Toggle Button */}
+              <button
+                onClick={() => setShowStashSidebar(!showStashSidebar)}
+                className={`ml-2 px-3 py-1.5 text-xs rounded transition-all ${
+                  showStashSidebar
+                    ? 'bg-graft-600/20 text-graft-400 border border-graft-600/30'
+                    : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:border-zinc-600 hover:text-zinc-300'
+                }`}
+                title={`${showStashSidebar ? 'Hide' : 'Show'} Stashes (${shortcutKey}+Shift+S)`}
+              >
+                💾 Stashes
+              </button>
+            </>
           )}
         </div>
         {repoInfo && (
@@ -1190,6 +1225,16 @@ function App() {
               )}
             </div>
           </div>
+
+          {/* Stash Sidebar with smooth transition */}
+          {showStashSidebar && (
+            <div className="animate-slide-in-right w-64">
+              <StashPanel
+                repoPath={repoInfo.path}
+                onRefresh={handleBranchChange}
+              />
+            </div>
+          )}
 
         {/* Right Panel with Tabs */}
         {repoInfo && (

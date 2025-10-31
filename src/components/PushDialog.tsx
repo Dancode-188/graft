@@ -21,7 +21,6 @@ export function PushDialog({
   onCancel,
 }: PushDialogProps) {
   const [needsForce, setNeedsForce] = useState(false);
-  const [confirmingForce, setConfirmingForce] = useState(false);
   const [holdProgress, setHoldProgress] = useState(0);
   const [isHolding, setIsHolding] = useState(false);
 
@@ -32,7 +31,7 @@ export function PushDialog({
 
   // Force push button hold logic
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: number;
     if (isHolding && holdProgress < 100) {
       interval = setInterval(() => {
         setHoldProgress((prev) => {
@@ -57,7 +56,6 @@ export function PushDialog({
   const handleForcePush = () => {
     // Use force-with-lease for safety
     onPush(false, true);
-    setConfirmingForce(false);
     setIsHolding(false);
     setHoldProgress(0);
   };

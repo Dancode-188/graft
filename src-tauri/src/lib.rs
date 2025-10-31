@@ -182,6 +182,27 @@ struct ValidationResult {
     warnings: Vec<String>,
 }
 
+// ============================================================================
+// Phase 8: Stash Management Data Structures
+// ============================================================================
+
+#[derive(Debug, Serialize, Clone)]
+struct StashEntry {
+    index: usize,           // Stash index (0 = most recent)
+    message: String,        // Stash message
+    branch: String,         // Branch where stash was created
+    timestamp: i64,         // Unix timestamp
+    oid: String,            // Git OID
+    file_count: usize,      // Number of files changed
+}
+
+#[derive(Debug, Deserialize)]
+struct StashCreateOptions {
+    message: Option<String>,
+    include_untracked: bool,
+    keep_index: bool,
+}
+
 #[tauri::command]
 fn open_repository(path: String) -> Result<RepoInfo, String> {
     // Validate path exists
@@ -1768,7 +1789,13 @@ pub fn run() {
             abort_rebase,
             get_rebase_status,
             validate_rebase_order,
-            prepare_interactive_rebase
+            prepare_interactive_rebase,
+            list_stashes,
+            create_stash,
+            apply_stash,
+            pop_stash,
+            drop_stash,
+            get_stash_diff
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -2438,4 +2465,382 @@ fn prepare_interactive_rebase(
         warnings,
         can_proceed: validation.is_valid,
     })
+}
+
+// ============================================================================
+// Phase 8: Stash Management Commands
+// ============================================================================
+
+/// List all stashes in the repository
+#[tauri::command]
+fn list_stashes(path: String) -> Result<Vec<StashEntry>, String> {
+    use std::sync::{Arc, Mutex};
+    
+    // Open the repository
+    let mut repo = Repository::open(&path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    let stashes = Arc::new(Mutex::new(Vec::new()));
+    let stashes_clone = Arc::clone(&stashes);
+    let path_clone = path.clone();
+
+    // Iterate through all stashes using git2's stash_foreach
+    repo.stash_foreach(|index, message, oid| {
+        // Parse the stash message to extract branch and commit info
+        // Format: "WIP on branch: commit_hash commit_message" or "On branch: message"
+        let message_str = message.to_string();
+        
+        // Extract branch name from stash message
+        let branch = if let Some(on_pos) = message_str.find("On ") {
+            let after_on = &message_str[on_pos + 3..];
+            if let Some(colon_pos) = after_on.find(':') {
+                after_on[..colon_pos].trim().to_string()
+            } else {
+                "unknown".to_string()
+            }
+        } else {
+            "unknown".to_string()
+        };
+
+        // Open repo separately for each stash to avoid borrow issues
+        let repo_inner = Repository::open(&path_clone).ok();
+        
+        // Get the stash commit to extract timestamp and file count
+        let stash_commit = repo_inner
+            .as_ref()
+            .and_then(|r| r.find_commit(*oid).ok());
+        
+        let timestamp = stash_commit
+            .as_ref()
+            .map(|c| c.time().seconds())
+            .unwrap_or(0);
+
+        // Count files changed in stash
+        let file_count = if let (Some(commit), Some(r)) = (stash_commit, repo_inner.as_ref()) {
+            // Get the tree for this commit
+            if let Ok(commit_tree) = commit.tree() {
+                // Get parent tree (if exists)
+                let parent_tree = if commit.parent_count() > 0 {
+                    commit.parent(0).ok().and_then(|p| p.tree().ok())
+                } else {
+                    None
+                };
+
+                // Create diff
+                let diff = if let Some(parent_tree) = parent_tree {
+                    r.diff_tree_to_tree(Some(&parent_tree), Some(&commit_tree), None).ok()
+                } else {
+                    r.diff_tree_to_tree(None, Some(&commit_tree), None).ok()
+                };
+
+                // Count deltas
+                diff.map(|d| d.deltas().count()).unwrap_or(0)
+            } else {
+                0
+            }
+        } else {
+            0
+        };
+
+        stashes_clone.lock().unwrap().push(StashEntry {
+            index,
+            message: message_str,
+            branch,
+            timestamp,
+            oid: oid.to_string(),
+            file_count,
+        });
+
+        true // Continue iteration
+    }).map_err(|e| format!("Failed to iterate stashes: {}", e))?;
+
+    Ok(Arc::try_unwrap(stashes).unwrap().into_inner().unwrap())
+}
+
+/// Create a new stash with the given options
+#[tauri::command]
+fn create_stash(
+    path: String,
+    options: StashCreateOptions,
+) -> Result<StashEntry, String> {
+    use git2::StashFlags;
+    
+    // Open the repository
+    let mut repo = Repository::open(&path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    // Check if there are any changes to stash
+    // Use a separate scope to ensure the immutable borrow is dropped before we mutably borrow
+    {
+        let statuses = repo.statuses(None)
+            .map_err(|e| format!("Failed to get repository status: {}", e))?;
+        
+        let has_changes = statuses.iter().any(|s| {
+            let status = s.status();
+            status.is_wt_modified() || status.is_wt_new() || status.is_wt_deleted() || 
+            status.is_index_modified() || status.is_index_new() || status.is_index_deleted()
+        });
+
+        if !has_changes {
+            return Err("No changes to stash. Working directory is clean.".to_string());
+        }
+    } // statuses is dropped here, releasing the immutable borrow
+
+    // Get signature
+    let signature = repo.signature()
+        .map_err(|e| format!("Failed to get signature: {}", e))?;
+
+    // Get current branch name for the message
+    let branch_name = repo.head()
+        .ok()
+        .and_then(|h| h.shorthand().map(|s| s.to_string()))
+        .unwrap_or_else(|| "HEAD".to_string());
+
+    // Build stash message
+    let message = if let Some(msg) = options.message {
+        // Custom message
+        msg
+    } else {
+        // Auto-generate message
+        format!("WIP on {}: {}", branch_name, 
+            chrono::Local::now().format("%Y-%m-%d %H:%M:%S"))
+    };
+
+    // Set up stash flags
+    let mut flags = StashFlags::DEFAULT;
+    
+    if options.include_untracked {
+        flags |= StashFlags::INCLUDE_UNTRACKED;
+    }
+    
+    if options.keep_index {
+        flags |= StashFlags::KEEP_INDEX;
+    }
+
+    // Create the stash
+    let stash_oid = repo.stash_save(&signature, &message, Some(flags))
+        .map_err(|e| format!("Failed to create stash: {}", e))?;
+
+    // Count files in the stash we just created
+    let stash_commit = repo.find_commit(stash_oid)
+        .map_err(|e| format!("Failed to find stash commit: {}", e))?;
+    
+    let file_count = if let Ok(commit_tree) = stash_commit.tree() {
+        let parent_tree = if stash_commit.parent_count() > 0 {
+            stash_commit.parent(0).ok().and_then(|p| p.tree().ok())
+        } else {
+            None
+        };
+
+        let diff = if let Some(parent_tree) = parent_tree {
+            repo.diff_tree_to_tree(Some(&parent_tree), Some(&commit_tree), None).ok()
+        } else {
+            repo.diff_tree_to_tree(None, Some(&commit_tree), None).ok()
+        };
+
+        diff.map(|d| d.deltas().count()).unwrap_or(0)
+    } else {
+        0
+    };
+
+    Ok(StashEntry {
+        index: 0, // New stash is always at index 0
+        message,
+        branch: branch_name,
+        timestamp: stash_commit.time().seconds(),
+        oid: stash_oid.to_string(),
+        file_count,
+    })
+}
+
+/// Apply a stash without removing it from the stash list
+#[tauri::command]
+fn apply_stash(
+    path: String,
+    stash_index: usize,
+    reinstate_index: bool,
+) -> Result<String, String> {
+    use git2::StashApplyOptions;
+    
+    // Open the repository
+    let mut repo = Repository::open(&path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    // Check if working directory is clean
+    // Use a separate scope to ensure the immutable borrow is dropped before we mutably borrow
+    {
+        let statuses = repo.statuses(None)
+            .map_err(|e| format!("Failed to get repository status: {}", e))?;
+        
+        let has_changes = statuses.iter().any(|s| {
+            let status = s.status();
+            status.is_wt_modified() || status.is_wt_new() || status.is_wt_deleted()
+        });
+
+        if has_changes {
+            return Err("Working directory has uncommitted changes. Commit or stash them before applying.".to_string());
+        }
+    } // statuses is dropped here, releasing the immutable borrow
+
+    // Set up apply options
+    let mut apply_options = StashApplyOptions::new();
+    
+    if reinstate_index {
+        apply_options.reinstantiate_index();
+    }
+
+    // Apply the stash
+    repo.stash_apply(stash_index, Some(&mut apply_options))
+        .map_err(|e| {
+            if e.message().contains("conflict") {
+                format!("Conflicts detected while applying stash. Please resolve manually.")
+            } else {
+                format!("Failed to apply stash: {}", e)
+            }
+        })?;
+
+    Ok(format!("Stash @{{{}}} applied successfully", stash_index))
+}
+
+/// Apply a stash and remove it from the stash list (pop)
+#[tauri::command]
+fn pop_stash(
+    path: String,
+    stash_index: usize,
+    reinstate_index: bool,
+) -> Result<String, String> {
+    use git2::StashApplyOptions;
+    
+    // Open the repository
+    let mut repo = Repository::open(&path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    // Check if working directory is clean
+    // Use a separate scope to ensure the immutable borrow is dropped before we mutably borrow
+    {
+        let statuses = repo.statuses(None)
+            .map_err(|e| format!("Failed to get repository status: {}", e))?;
+        
+        let has_changes = statuses.iter().any(|s| {
+            let status = s.status();
+            status.is_wt_modified() || status.is_wt_new() || status.is_wt_deleted()
+        });
+
+        if has_changes {
+            return Err("Working directory has uncommitted changes. Commit or stash them before popping.".to_string());
+        }
+    } // statuses is dropped here, releasing the immutable borrow
+
+    // Set up apply options
+    let mut apply_options = StashApplyOptions::new();
+    
+    if reinstate_index {
+        apply_options.reinstantiate_index();
+    }
+
+    // Pop the stash (apply and remove)
+    repo.stash_pop(stash_index, Some(&mut apply_options))
+        .map_err(|e| {
+            if e.message().contains("conflict") {
+                format!("Conflicts detected while popping stash. Stash was not removed.")
+            } else {
+                format!("Failed to pop stash: {}", e)
+            }
+        })?;
+
+    Ok(format!("Stash @{{{}}} popped successfully", stash_index))
+}
+
+/// Drop (delete) a stash from the list
+#[tauri::command]
+fn drop_stash(
+    path: String,
+    stash_index: usize,
+) -> Result<String, String> {
+    // Open the repository
+    let mut repo = Repository::open(&path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    // Drop the stash
+    repo.stash_drop(stash_index)
+        .map_err(|e| format!("Failed to drop stash: {}", e))?;
+
+    Ok(format!("Stash @{{{}}} dropped successfully", stash_index))
+}
+
+/// Get the diff for a specific stash (for preview)
+#[tauri::command]
+fn get_stash_diff(
+    path: String,
+    stash_index: usize,
+) -> Result<Vec<FileChange>, String> {
+    // Open the repository
+    let repo = Repository::open(&path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    // Find the stash commit
+    let stash_name = format!("stash@{{{}}}", stash_index);
+    let stash_ref = repo.revparse_single(&stash_name)
+        .map_err(|e| format!("Failed to find stash: {}", e))?;
+    
+    let stash_commit = stash_ref.peel_to_commit()
+        .map_err(|e| format!("Failed to get stash commit: {}", e))?;
+
+    // Get the tree for this stash
+    let stash_tree = stash_commit.tree()
+        .map_err(|e| format!("Failed to get stash tree: {}", e))?;
+
+    // Get the parent tree (base state before stash)
+    let parent_tree = if stash_commit.parent_count() > 0 {
+        stash_commit.parent(0)
+            .ok()
+            .and_then(|p| p.tree().ok())
+    } else {
+        None
+    };
+
+    // Create diff
+    let diff = if let Some(parent_tree) = parent_tree {
+        repo.diff_tree_to_tree(Some(&parent_tree), Some(&stash_tree), None)
+            .map_err(|e| format!("Failed to create diff: {}", e))?
+    } else {
+        repo.diff_tree_to_tree(None, Some(&stash_tree), None)
+            .map_err(|e| format!("Failed to create diff: {}", e))?
+    };
+
+    // Collect file changes
+    let mut file_changes = Vec::new();
+
+    diff.foreach(
+        &mut |delta, _| {
+            let path = delta.new_file()
+                .path()
+                .unwrap_or_else(|| delta.old_file().path().unwrap_or(std::path::Path::new("unknown")))
+                .to_string_lossy()
+                .to_string();
+
+            let status = match delta.status() {
+                git2::Delta::Added => "added",
+                git2::Delta::Deleted => "deleted",
+                git2::Delta::Modified => "modified",
+                git2::Delta::Renamed => "renamed",
+                git2::Delta::Copied => "copied",
+                _ => "unknown",
+            };
+
+            file_changes.push(FileChange {
+                path,
+                status: status.to_string(),
+                insertions: 0,
+                deletions: 0,
+            });
+
+            true
+        },
+        None,
+        None,
+        None,
+    ).map_err(|e| format!("Failed to iterate diff: {}", e))?;
+
+    Ok(file_changes)
 }
