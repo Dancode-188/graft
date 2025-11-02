@@ -1758,6 +1758,60 @@ fn get_rebase_commits(
     Ok(commits)
 }
 
+/// Discard changes to a specific file in the working directory
+#[tauri::command]
+fn discard_file_changes(
+    path: String,
+    file_path: String,
+) -> Result<String, String> {
+    // Open the repository
+    let repo = Repository::open(&path)
+        .map_err(|e| format!("Failed to open repository: {}", e))?;
+
+    // Get the file path as a Path object
+    let file_path_obj = std::path::Path::new(&file_path);
+
+    // Try to get the file from HEAD
+    let head = repo.head()
+        .map_err(|e| format!("Failed to get HEAD: {}", e))?;
+    let head_commit = head.peel_to_commit()
+        .map_err(|e| format!("Failed to get HEAD commit: {}", e))?;
+    let head_tree = head_commit.tree()
+        .map_err(|e| format!("Failed to get HEAD tree: {}", e))?;
+
+    // Check if file exists in HEAD
+    if let Ok(entry) = head_tree.get_path(file_path_obj) {
+        // File exists in HEAD - restore it
+        let obj = entry.to_object(&repo)
+            .map_err(|e| format!("Failed to get object: {}", e))?;
+        let blob = obj.as_blob()
+            .ok_or_else(|| format!("Object is not a blob: {}", file_path))?;
+
+        // Write the blob content to the working directory
+        let repo_workdir = repo.workdir()
+            .ok_or_else(|| "Repository has no working directory".to_string())?;
+        let full_path = repo_workdir.join(file_path_obj);
+
+        std::fs::write(&full_path, blob.content())
+            .map_err(|e| format!("Failed to write file: {}", e))?;
+
+        Ok(format!("Discarded changes to {}", file_path))
+    } else {
+        // File doesn't exist in HEAD (new file) - delete it
+        let repo_workdir = repo.workdir()
+            .ok_or_else(|| "Repository has no working directory".to_string())?;
+        let full_path = repo_workdir.join(file_path_obj);
+
+        if full_path.exists() {
+            std::fs::remove_file(&full_path)
+                .map_err(|e| format!("Failed to delete file: {}", e))?;
+            Ok(format!("Deleted new file {}", file_path))
+        } else {
+            Err(format!("File not found: {}", file_path))
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -1795,7 +1849,8 @@ pub fn run() {
             apply_stash,
             pop_stash,
             drop_stash,
-            get_stash_diff
+            get_stash_diff,
+            discard_file_changes
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

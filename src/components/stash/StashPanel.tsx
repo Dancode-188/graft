@@ -16,6 +16,7 @@ export function StashPanel({ repoPath, onRefresh }: StashPanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [previewStash, setPreviewStash] = useState<StashEntry | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; stash: StashEntry } | null>(null);
 
   // Load stashes
   const loadStashes = async () => {
@@ -37,6 +38,15 @@ export function StashPanel({ repoPath, onRefresh }: StashPanelProps) {
   useEffect(() => {
     loadStashes();
   }, [repoPath]);
+
+  // Close context menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setContextMenu(null);
+    if (contextMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [contextMenu]);
 
   const handleCreateStash = () => {
     setShowCreateModal(true);
@@ -97,6 +107,34 @@ export function StashPanel({ repoPath, onRefresh }: StashPanelProps) {
     }
   };
 
+  const handleStashContextMenu = (stash: StashEntry, x: number, y: number) => {
+    setContextMenu({ x, y, stash });
+  };
+
+  const handleContextAction = (action: 'apply' | 'pop' | 'drop' | 'preview' | 'copyId') => {
+    if (!contextMenu) return;
+    
+    switch (action) {
+      case 'apply':
+        handleApply(contextMenu.stash.index, false);
+        break;
+      case 'pop':
+        handleApply(contextMenu.stash.index, true);
+        break;
+      case 'drop':
+        handleDrop(contextMenu.stash.index);
+        break;
+      case 'preview':
+        handlePreview(contextMenu.stash);
+        break;
+      case 'copyId':
+        navigator.clipboard.writeText(`stash@{${contextMenu.stash.index}}`);
+        break;
+    }
+    
+    setContextMenu(null);
+  };
+
   return (
     <div className="h-full flex flex-col bg-zinc-900">
       {/* Header */}
@@ -152,6 +190,7 @@ export function StashPanel({ repoPath, onRefresh }: StashPanelProps) {
             onPreview={handlePreview}
             onApply={handleApply}
             onDrop={handleDrop}
+            onContextMenu={handleStashContextMenu}
           />
         )}
       </div>
@@ -173,6 +212,55 @@ export function StashPanel({ repoPath, onRefresh }: StashPanelProps) {
           onApply={(pop) => handleApply(previewStash.index, pop)}
           onDrop={() => handleDrop(previewStash.index)}
         />
+      )}
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <div
+          className="fixed bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl py-1 z-50 min-w-[180px]"
+          style={{
+            left: contextMenu.x,
+            top: contextMenu.y,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => handleContextAction('preview')}
+            className="w-full px-4 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+          >
+            <span>👁️</span>
+            <span>Preview</span>
+          </button>
+          <button
+            onClick={() => handleContextAction('apply')}
+            className="w-full px-4 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+          >
+            <span>✅</span>
+            <span>Apply (keep)</span>
+          </button>
+          <button
+            onClick={() => handleContextAction('pop')}
+            className="w-full px-4 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+          >
+            <span>⚡</span>
+            <span>Pop (apply & remove)</span>
+          </button>
+          <div className="h-px bg-zinc-700 my-1" />
+          <button
+            onClick={() => handleContextAction('copyId')}
+            className="w-full px-4 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+          >
+            <span>📋</span>
+            <span>Copy ID</span>
+          </button>
+          <button
+            onClick={() => handleContextAction('drop')}
+            className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+          >
+            <span>🗑️</span>
+            <span>Drop (delete)</span>
+          </button>
+        </div>
       )}
     </div>
   );

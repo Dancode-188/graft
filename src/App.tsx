@@ -24,6 +24,9 @@ import {
 } from "./components/rebase";
 import { StashPanel } from "./components/stash";
 import { CommandPalette, createCommands, type CommandActions } from "./components/command-palette";
+import { KeyboardShortcuts } from "./components/keyboard";
+import { QuickSearch } from "./components/quick-search";
+import { StashEntry } from "./components/stash/types";
 
 interface RepoInfo {
   name: string;
@@ -50,6 +53,17 @@ export interface Commit {
     is_annotated: boolean;
     is_remote: boolean;
   }>;
+}
+
+interface Branch {
+  name: string;
+  full_name: string;
+  is_remote: boolean;
+  is_current: boolean;
+  commit_hash: string;
+  commit_message: string;
+  last_commit_date: number;
+  upstream: string | null;
 }
 
 interface FileChange {
@@ -385,11 +399,15 @@ function SearchModal({
 function App() {
   const [repoInfo, setRepoInfo] = useState<RepoInfo | null>(null);
   const [commits, setCommits] = useState<Commit[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [stashes, setStashes] = useState<StashEntry[]>([]);
   const [selectedCommitIndex, setSelectedCommitIndex] = useState<number>(-1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [quickSearchOpen, setQuickSearchOpen] = useState(false);
+  const [shortcutsOverlayOpen, setShortcutsOverlayOpen] = useState(false);
   const [showLegend, setShowLegend] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [rightPanelTab, setRightPanelTab] = useState<'details' | 'staging'>('staging');
@@ -446,9 +464,6 @@ function App() {
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; commit: Commit } | null>(null);
   
-  // Command Palette state
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
-  
   const listContainerRef = useRef<HTMLDivElement>(null);
 
   // Save branch sidebar state to localStorage whenever it changes
@@ -486,6 +501,20 @@ function App() {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         setCommandPaletteOpen(true);
+      }
+
+      // Cmd+/ (Mac) or Ctrl+/ (Windows/Linux) to show keyboard shortcuts
+      if ((e.metaKey || e.ctrlKey) && e.key === "/") {
+        e.preventDefault();
+        setShortcutsOverlayOpen(true);
+      }
+
+      // Cmd+P (Mac) or Ctrl+P (Windows/Linux) to open quick search
+      if ((e.metaKey || e.ctrlKey) && e.key === "p") {
+        e.preventDefault();
+        if (repoInfo) {
+          setQuickSearchOpen(true);
+        }
       }
 
       // Cmd+B (Mac) or Ctrl+B (Windows/Linux) to toggle branch sidebar
@@ -551,6 +580,10 @@ function App() {
           setSearchOpen(false);
         } else if (commandPaletteOpen) {
           setCommandPaletteOpen(false);
+        } else if (quickSearchOpen) {
+          setQuickSearchOpen(false);
+        } else if (shortcutsOverlayOpen) {
+          setShortcutsOverlayOpen(false);
         } else {
           setSelectedCommitIndex(-1);
         }
@@ -606,6 +639,28 @@ function App() {
     }
   }, [selectedCommitIndex]);
 
+  // Load branches from repository
+  const loadBranches = async (repoPath: string) => {
+    try {
+      const result = await invoke<Branch[]>('get_branches', { path: repoPath });
+      setBranches(result);
+    } catch (err) {
+      console.error('Failed to load branches:', err);
+      setBranches([]);
+    }
+  };
+
+  // Load stashes from repository
+  const loadStashes = async (repoPath: string) => {
+    try {
+      const result = await invoke<StashEntry[]>('list_stashes', { path: repoPath });
+      setStashes(result);
+    } catch (err) {
+      console.error('Failed to load stashes:', err);
+      setStashes([]);
+    }
+  };
+
   const handleOpenRepo = async () => {
     try {
       setLoading(true);
@@ -632,11 +687,17 @@ function App() {
           limit: 1000, // Increased limit for virtual scrolling
         });
         setCommits(commitList);
+
+        // Load branches and stashes
+        await loadBranches(selected);
+        await loadStashes(selected);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
       setRepoInfo(null);
       setCommits([]);
+      setBranches([]);
+      setStashes([]);
     } finally {
       setLoading(false);
     }
@@ -646,6 +707,18 @@ function App() {
     const index = commits.findIndex((c) => c.hash === commit.hash);
     setSelectedCommitIndex(index);
     setRightPanelTab('details'); // Switch to details when selecting a commit
+  };
+
+  const handleSelectBranch = (branchName: string) => {
+    // Show the branch sidebar when a branch is selected from quick search
+    setShowBranchSidebar(true);
+    // The BranchSidebar will highlight the selected branch
+  };
+
+  const handleSelectStash = (stashIndex: number) => {
+    // Show the stash sidebar when a stash is selected from quick search
+    setShowStashSidebar(true);
+    // The StashPanel will show the selected stash
   };
 
   const handleCommitCreated = async () => {
@@ -681,6 +754,10 @@ function App() {
         });
         setCommits(commitList);
         setSelectedCommitIndex(-1);
+
+        // Refresh branches and stashes
+        await loadBranches(repoInfo.path);
+        await loadStashes(repoInfo.path);
       } catch (err) {
         console.error("Failed to refresh after branch change:", err);
       }
@@ -1002,15 +1079,84 @@ function App() {
     setContextMenu({ x, y, commit });
   };
 
-  const handleContextMenuAction = (action: 'rebase') => {
+  const handleContextMenuAction = (action: 'rebase' | 'checkout' | 'cherrypick' | 'revert' | 'copyHash' | 'copyMessage') => {
     if (!contextMenu) return;
 
-    if (action === 'rebase') {
-      // Start interactive rebase from the selected commit
-      handleOpenRebaseModal(contextMenu.commit.hash);
+    switch (action) {
+      case 'rebase':
+        // Start interactive rebase from the selected commit
+        handleOpenRebaseModal(contextMenu.commit.hash);
+        break;
+      
+      case 'checkout':
+        // Checkout commit (detached HEAD)
+        if (confirm(`Checkout commit ${contextMenu.commit.short_hash}? This will put you in detached HEAD state.`)) {
+          handleCheckoutCommit(contextMenu.commit.hash);
+        }
+        break;
+      
+      case 'cherrypick':
+        // Cherry-pick commit
+        if (confirm(`Cherry-pick commit ${contextMenu.commit.short_hash}?`)) {
+          handleCherryPickCommit(contextMenu.commit.hash);
+        }
+        break;
+      
+      case 'revert':
+        // Revert commit
+        if (confirm(`Revert commit ${contextMenu.commit.short_hash}? This creates a new commit that undoes these changes.`)) {
+          handleRevertCommit(contextMenu.commit.hash);
+        }
+        break;
+      
+      case 'copyHash':
+        // Copy commit hash to clipboard
+        navigator.clipboard.writeText(contextMenu.commit.hash);
+        break;
+      
+      case 'copyMessage':
+        // Copy commit message to clipboard
+        navigator.clipboard.writeText(contextMenu.commit.message);
+        break;
     }
 
     setContextMenu(null);
+  };
+
+  const handleCheckoutCommit = async (commitHash: string) => {
+    if (!repoInfo) return;
+    
+    try {
+      await invoke('checkout_commit', { path: repoInfo.path, commitHash });
+      await handleBranchChange(); // Refresh to show detached HEAD state
+    } catch (err) {
+      console.error('Failed to checkout commit:', err);
+      alert(`Failed to checkout commit: ${err}`);
+    }
+  };
+
+  const handleCherryPickCommit = async (commitHash: string) => {
+    if (!repoInfo) return;
+    
+    try {
+      await invoke('cherrypick_commit', { path: repoInfo.path, commitHash });
+      await handleBranchChange(); // Refresh commits
+    } catch (err) {
+      console.error('Failed to cherry-pick commit:', err);
+      alert(`Failed to cherry-pick commit: ${err}`);
+    }
+  };
+
+  const handleRevertCommit = async (commitHash: string) => {
+    if (!repoInfo) return;
+    
+    try {
+      await invoke('revert_commit', { path: repoInfo.path, commitHash });
+      await handleBranchChange(); // Refresh commits
+    } catch (err) {
+      console.error('Failed to revert commit:', err);
+      alert(`Failed to revert commit: ${err}`);
+    }
   };
 
   // Create command actions for command palette
@@ -1086,13 +1232,10 @@ function App() {
     
     // Search
     searchCommits: () => setSearchOpen(true),
-    quickSearch: () => setSearchOpen(true), // For now, same as searchCommits
+    quickSearch: () => setQuickSearchOpen(true),
     
     // Help
-    showShortcuts: () => {
-      // TODO: Implement shortcuts overlay in Phase 9.2
-      console.log('Shortcuts overlay coming in Phase 9.2!');
-    },
+    showShortcuts: () => setShortcutsOverlayOpen(true),
     showCommandPalette: () => setCommandPaletteOpen(true),
     
     // Context checks
@@ -1446,7 +1589,27 @@ function App() {
         isOpen={commandPaletteOpen}
         onClose={() => setCommandPaletteOpen(false)}
         commands={paletteCommands}
-        recentCommands={[]} // TODO: Track recent commands in Phase 9.2
+      />
+
+      {/* Keyboard Shortcuts Overlay */}
+      <KeyboardShortcuts
+        isOpen={shortcutsOverlayOpen}
+        onClose={() => setShortcutsOverlayOpen(false)}
+      />
+
+      {/* Quick Search */}
+      <QuickSearch
+        isOpen={quickSearchOpen}
+        onClose={() => setQuickSearchOpen(false)}
+        commits={commits}
+        branches={branches}
+        stashes={stashes}
+        onSelectCommit={(index) => {
+          setSelectedCommitIndex(index);
+          setRightPanelTab('details');
+        }}
+        onSelectBranch={handleSelectBranch}
+        onSelectStash={handleSelectStash}
       />
 
       {/* Context Menu for Commits */}
@@ -1464,6 +1627,42 @@ function App() {
           >
             <span>🔀</span>
             <span>Interactive Rebase from Here</span>
+          </button>
+          <button
+            onClick={() => handleContextMenuAction('checkout')}
+            className="w-full px-4 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+          >
+            <span>↪️</span>
+            <span>Checkout Commit</span>
+          </button>
+          <button
+            onClick={() => handleContextMenuAction('cherrypick')}
+            className="w-full px-4 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+          >
+            <span>🍒</span>
+            <span>Cherry-pick</span>
+          </button>
+          <button
+            onClick={() => handleContextMenuAction('revert')}
+            className="w-full px-4 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+          >
+            <span>⎌</span>
+            <span>Revert Commit</span>
+          </button>
+          <div className="h-px bg-zinc-700 my-1" />
+          <button
+            onClick={() => handleContextMenuAction('copyHash')}
+            className="w-full px-4 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+          >
+            <span>📋</span>
+            <span>Copy Hash</span>
+          </button>
+          <button
+            onClick={() => handleContextMenuAction('copyMessage')}
+            className="w-full px-4 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+          >
+            <span>📝</span>
+            <span>Copy Message</span>
           </button>
         </div>
       )}

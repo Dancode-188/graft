@@ -3,6 +3,7 @@ interface FileListItemProps {
   status: string; // "modified", "added", "deleted", "renamed", "conflicted"
   isStaged: boolean;
   onClick: () => void;
+  onContextMenu?: (x: number, y: number) => void;
 }
 
 // Get icon and color for file status
@@ -21,12 +22,18 @@ function getStatusIcon(status: string): { icon: string; color: string; label: st
   };
 }
 
-export function FileListItem({ path, status, isStaged, onClick }: FileListItemProps) {
+export function FileListItem({ path, status, isStaged, onClick, onContextMenu }: FileListItemProps) {
   const statusInfo = getStatusIcon(status);
 
   return (
     <button
       onClick={onClick}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        if (onContextMenu) {
+          onContextMenu(e.clientX, e.clientY);
+        }
+      }}
       className="w-full px-3 py-2 text-left hover:bg-zinc-800 active:bg-zinc-700 transition-colors group"
     >
       <div className="flex items-center gap-2">

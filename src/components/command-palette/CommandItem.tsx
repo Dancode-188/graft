@@ -1,4 +1,5 @@
 // Command Item - Individual command row
+import { memo } from 'react';
 import { Command } from './types';
 
 interface CommandItemProps {
@@ -8,7 +9,12 @@ interface CommandItemProps {
   dataIndex: number;
 }
 
-export function CommandItem({ command, isSelected, onClick, dataIndex }: CommandItemProps) {
+export const CommandItem = memo(function CommandItem({ 
+  command, 
+  isSelected, 
+  onClick, 
+  dataIndex 
+}: CommandItemProps) {
   return (
     <button
       data-index={dataIndex}
@@ -19,6 +25,9 @@ export function CommandItem({ command, isSelected, onClick, dataIndex }: Command
                       ? 'bg-zinc-800 border-l-2 border-indigo-500' 
                       : 'hover:bg-zinc-850 border-l-2 border-transparent'
                   }`}
+      role="option"
+      aria-selected={isSelected}
+      id={`command-${command.id}`}
     >
       <div className="flex items-center gap-3 flex-1 min-w-0">
         {command.icon && (
@@ -39,4 +48,9 @@ export function CommandItem({ command, isSelected, onClick, dataIndex }: Command
       )}
     </button>
   );
-}
+}, (prevProps, nextProps) => {
+  // Only re-render if these specific props change
+  return prevProps.command.id === nextProps.command.id &&
+         prevProps.isSelected === nextProps.isSelected &&
+         prevProps.dataIndex === nextProps.dataIndex;
+});

@@ -1,102 +1,122 @@
 // Command Palette - Main Modal Component
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Command, CommandGroup } from './types';
 import { searchCommands } from './fuzzySearch';
 import { CommandItem } from './CommandItem';
 import { CommandCategory } from './CommandCategory';
+import { useDebounce } from '../../hooks/useDebounce';
+import { saveRecentCommand, getRecentCommands } from '../../utils/recentCommands';
 
 interface CommandPaletteProps {
   isOpen: boolean;
   onClose: () => void;
   commands: Command[];
-  recentCommands?: string[]; // Command IDs
 }
 
 export function CommandPalette({ 
   isOpen, 
   onClose, 
-  commands,
-  recentCommands = []
+  commands
 }: CommandPaletteProps) {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [recentCommandIds, setRecentCommandIds] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // Reset state when opened
+  // Debounce query for performance
+  const debouncedQuery = useDebounce(query, 100);
+
+  // Reset state when opened and load recent commands
   useEffect(() => {
     if (isOpen) {
       setQuery('');
       setSelectedIndex(0);
+      setRecentCommandIds(getRecentCommands());
       // Focus input after a short delay to ensure modal is rendered
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [isOpen]);
 
-  // Filter commands based on query
-  const availableCommands = commands.filter(cmd => !cmd.when || cmd.when());
-  
-  const filteredCommands: Command[] = query.trim() 
-    ? searchCommands(query, availableCommands).map(match => match.command)
-    : availableCommands;
+  // Filter commands based on debounced query (memoized for performance)
+  const filteredCommands: Command[] = useMemo(() => {
+    const availableCommands = commands.filter(cmd => !cmd.when || cmd.when());
+    
+    return debouncedQuery.trim() 
+      ? searchCommands(debouncedQuery, availableCommands).map(match => match.command)
+      : availableCommands;
+  }, [debouncedQuery, commands]);
 
-  // Group commands by category
-  const groupedCommands: CommandGroup[] = [];
-  
-  // If we have a query, show all results together
-  if (query.trim()) {
-    if (filteredCommands.length > 0) {
-      groupedCommands.push({
-        category: 'search',
-        label: 'Search Results',
-        commands: filteredCommands
-      });
-    }
-  } else {
-    // No query - show by category
-    // First show recent commands if any
-    if (recentCommands.length > 0) {
-      const recent = commands.filter(cmd => 
-        recentCommands.includes(cmd.id) && (!cmd.when || cmd.when())
-      );
-      if (recent.length > 0) {
-        groupedCommands.push({
-          category: 'repository',
-          label: 'Recent',
-          commands: recent
+  // Group commands by category (memoized for performance)
+  const groupedCommands: CommandGroup[] = useMemo(() => {
+    const groups: CommandGroup[] = [];
+    
+    // If we have a query, show all results together
+    if (debouncedQuery.trim()) {
+      if (filteredCommands.length > 0) {
+        groups.push({
+          category: 'search',
+          label: 'Search Results',
+          commands: filteredCommands
         });
+      }
+    } else {
+      // No query - show by category
+      // First show recent commands if any
+      if (recentCommandIds.length > 0) {
+        const recent = commands.filter(cmd => 
+          recentCommandIds.includes(cmd.id) && (!cmd.when || cmd.when())
+        );
+        if (recent.length > 0) {
+          groups.push({
+            category: 'repository',
+            label: 'Recent',
+            commands: recent
+          });
+        }
+      }
+
+      // Group remaining commands by category
+      const categories = Array.from(new Set(filteredCommands.map(c => c.category)));
+      const categoryLabels: Record<string, string> = {
+        repository: 'Repository',
+        staging: 'Staging',
+        commits: 'Commits',
+        branches: 'Branches',
+        remote: 'Remote',
+        stash: 'Stash',
+        rebase: 'Rebase',
+        view: 'View',
+        search: 'Search',
+        help: 'Help'
+      };
+
+      for (const category of categories) {
+        const cmds = filteredCommands.filter(c => c.category === category);
+        if (cmds.length > 0) {
+          groups.push({
+            category: category as any,
+            label: categoryLabels[category] || category,
+            commands: cmds
+          });
+        }
       }
     }
 
-    // Group remaining commands by category
-    const categories = Array.from(new Set(filteredCommands.map(c => c.category)));
-    const categoryLabels: Record<string, string> = {
-      repository: 'Repository',
-      staging: 'Staging',
-      commits: 'Commits',
-      branches: 'Branches',
-      remote: 'Remote',
-      stash: 'Stash',
-      rebase: 'Rebase',
-      view: 'View',
-      search: 'Search',
-      help: 'Help'
-    };
+    return groups;
+  }, [debouncedQuery, filteredCommands, recentCommandIds, commands]);
 
-    for (const category of categories) {
-      const cmds = filteredCommands.filter(c => c.category === category);
-      if (cmds.length > 0) {
-        groupedCommands.push({
-          category: category as any,
-          label: categoryLabels[category] || category,
-          commands: cmds
-        });
-      }
-    }
-  }
-
-  // Flatten all commands for keyboard navigation
-  const allVisibleCommands = groupedCommands.flatMap(g => g.commands);
+  // Flatten all commands for keyboard navigation (memoized)
+  const allVisibleCommands = useMemo(() => {
+    return groupedCommands.flatMap(g => g.commands);
+  }, [groupedCommands]);
+  
+  // Handle command execution with recent tracking
+  const executeCommand = useCallback((command: Command) => {
+    command.action();
+    saveRecentCommand(command.id);
+    onClose();
+  }, [onClose]);
   
   // Keyboard navigation
   useEffect(() => {
@@ -113,8 +133,7 @@ export function CommandPalette({
         e.preventDefault();
         const command = allVisibleCommands[selectedIndex];
         if (command) {
-          command.action();
-          onClose();
+          executeCommand(command);
         }
       } else if (e.key === 'Escape') {
         e.preventDefault();
@@ -124,7 +143,7 @@ export function CommandPalette({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, selectedIndex, allVisibleCommands, onClose]);
+  }, [isOpen, selectedIndex, allVisibleCommands, executeCommand, onClose]);
 
   // Scroll selected item into view
   useEffect(() => {
@@ -171,12 +190,23 @@ export function CommandPalette({
                 className="w-full bg-zinc-800 text-zinc-200 pl-10 pr-4 py-3 rounded-md
                           placeholder-zinc-500 focus:outline-none focus:ring-2 
                           focus:ring-indigo-500 border border-zinc-700"
+                role="combobox"
+                aria-label="Search commands"
+                aria-controls="command-results"
+                aria-expanded={isOpen}
+                aria-activedescendant={allVisibleCommands[selectedIndex] ? `command-${allVisibleCommands[selectedIndex].id}` : undefined}
               />
             </div>
           </div>
 
           {/* Results */}
-          <div ref={listRef} className="overflow-y-auto flex-1">
+          <div 
+            ref={listRef} 
+            className="overflow-y-auto flex-1"
+            role="listbox"
+            id="command-results"
+            aria-label="Available commands"
+          >
             {groupedCommands.length === 0 ? (
               <div className="p-8 text-center text-zinc-500">
                 No commands found
@@ -197,10 +227,7 @@ export function CommandPalette({
                           key={command.id}
                           command={command}
                           isSelected={globalIndex === selectedIndex}
-                          onClick={() => {
-                            command.action();
-                            onClose();
-                          }}
+                          onClick={() => executeCommand(command)}
                           dataIndex={globalIndex}
                         />
                       );

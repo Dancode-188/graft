@@ -5,6 +5,7 @@ interface StashItemProps {
   onPreview: (stash: StashEntry) => void;
   onApply: (stashIndex: number, pop: boolean) => void;
   onDrop: (stashIndex: number) => void;
+  onContextMenu?: (stash: StashEntry, x: number, y: number) => void;
 }
 
 // Format date to relative time
@@ -22,14 +23,22 @@ function getRelativeTime(timestamp: number): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-export function StashItem({ stash, onPreview, onApply, onDrop }: StashItemProps) {
+export function StashItem({ stash, onPreview, onApply, onDrop, onContextMenu }: StashItemProps) {
   // Extract the actual message (remove "WIP on branch:" prefix if present)
   const displayMessage = stash.message.startsWith('WIP on') 
     ? stash.message.split(':').slice(1).join(':').trim() || stash.message
     : stash.message;
 
   return (
-    <div className="bg-zinc-800/50 hover:bg-zinc-800 rounded border border-zinc-700 hover:border-zinc-600 transition-all p-3 group">
+    <div 
+      className="bg-zinc-800/50 hover:bg-zinc-800 rounded border border-zinc-700 hover:border-zinc-600 transition-all p-3 group"
+      onContextMenu={(e) => {
+        e.preventDefault();
+        if (onContextMenu) {
+          onContextMenu(stash, e.clientX, e.clientY);
+        }
+      }}
+    >
       {/* Header */}
       <div className="flex items-start justify-between gap-2 mb-2">
         <div className="flex-1 min-w-0">

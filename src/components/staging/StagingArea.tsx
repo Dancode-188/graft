@@ -25,6 +25,11 @@ export function StagingArea({ repoPath, onCommitCreated }: StagingAreaProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [committing, setCommitting] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    file: WorkingDirectoryFile;
+  } | null>(null);
   // Load working directory status
   const loadStatus = async () => {
     setLoading(true);
@@ -45,6 +50,15 @@ export function StagingArea({ repoPath, onCommitCreated }: StagingAreaProps) {
   useEffect(() => {
     loadStatus();
   }, [repoPath]);
+
+  // Close context menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setContextMenu(null);
+    if (contextMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [contextMenu]);
 
   // Stage files
   const handleStageFiles = async (paths: string[]) => {
@@ -69,6 +83,51 @@ export function StagingArea({ repoPath, onCommitCreated }: StagingAreaProps) {
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
+  };
+
+  // Discard file changes
+  const handleDiscardFile = async (filePath: string) => {
+    try {
+      await invoke('discard_file_changes', {
+        path: repoPath,
+        filePath: filePath,
+      });
+      await loadStatus(); // Refresh
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  // Context menu handlers
+  const handleFileContextMenu = (file: WorkingDirectoryFile, x: number, y: number) => {
+    setContextMenu({ x, y, file });
+  };
+
+  const handleFileContextAction = (action: 'stage' | 'unstage' | 'discard' | 'copyPath') => {
+    if (!contextMenu) return;
+
+    switch (action) {
+      case 'stage':
+        handleStageFiles([contextMenu.file.path]);
+        break;
+      case 'unstage':
+        handleUnstageFiles([contextMenu.file.path]);
+        break;
+      case 'discard':
+        const confirmed = confirm(
+          `Discard changes to ${contextMenu.file.path}?\n\n` +
+          `⚠️ This action cannot be undone. All changes will be lost.`
+        );
+        if (confirmed) {
+          handleDiscardFile(contextMenu.file.path);
+        }
+        break;
+      case 'copyPath':
+        navigator.clipboard.writeText(contextMenu.file.path);
+        break;
+    }
+
+    setContextMenu(null);
   };
 
   // Create commit
@@ -150,6 +209,7 @@ export function StagingArea({ repoPath, onCommitCreated }: StagingAreaProps) {
                     status={file.status}
                     isStaged={false}
                     onClick={() => handleStageFiles([file.path])}
+                    onContextMenu={(x, y) => handleFileContextMenu(file, x, y)}
                   />
                 ))}
               </div>
@@ -177,6 +237,7 @@ export function StagingArea({ repoPath, onCommitCreated }: StagingAreaProps) {
                     status={file.status}
                     isStaged={true}
                     onClick={() => handleUnstageFiles([file.path])}
+                    onContextMenu={(x, y) => handleFileContextMenu(file, x, y)}
                   />
                 ))}
               </div>
@@ -201,6 +262,53 @@ export function StagingArea({ repoPath, onCommitCreated }: StagingAreaProps) {
           {committing ? 'Committing...' : `Commit ${status.staged.length} file${status.staged.length !== 1 ? 's' : ''}`}
         </button>
       </div>
+
+      {/* Context Menu for Files */}
+      {contextMenu && (
+        <div
+          className="fixed z-50 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl py-1 min-w-[180px]"
+          style={{
+            left: contextMenu.x,
+            top: contextMenu.y,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {!contextMenu.file.is_staged ? (
+            <button
+              onClick={() => handleFileContextAction('stage')}
+              className="w-full px-4 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+            >
+              <span>✅</span>
+              <span>Stage File</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => handleFileContextAction('unstage')}
+              className="w-full px-4 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+            >
+              <span>↩️</span>
+              <span>Unstage File</span>
+            </button>
+          )}
+          {!contextMenu.file.is_staged && contextMenu.file.status !== 'added' && (
+            <button
+              onClick={() => handleFileContextAction('discard')}
+              className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+            >
+              <span>🗑️</span>
+              <span>Discard Changes</span>
+            </button>
+          )}
+          <div className="h-px bg-zinc-700 my-1" />
+          <button
+            onClick={() => handleFileContextAction('copyPath')}
+            className="w-full px-4 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+          >
+            <span>📋</span>
+            <span>Copy Path</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

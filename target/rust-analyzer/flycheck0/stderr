@@ -1,18 +1,1 @@
-   1.846780500s  INFO prepare_target{force=false package_id=graft v0.6.0 (C:\Users\user\graft\src-tauri) target="graft_lib"}: cargo::core::compiler::fingerprint: fingerprint dirty for graft v0.6.0 (C:\Users\user\graft\src-tauri)/Check { test: false }/TargetInner { ..: lib_target("graft_lib", ["staticlib", "cdylib", "rlib"], "C:\\Users\\user\\graft\\src-tauri\\src\\lib.rs", Edition2021) }
-   1.846906400s  INFO prepare_target{force=false package_id=graft v0.6.0 (C:\Users\user\graft\src-tauri) target="graft_lib"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(Stale)
-   1.849866100s  INFO prepare_target{force=false package_id=chrono v0.4.42 target="chrono"}: cargo::core::compiler::fingerprint: fingerprint dirty for chrono v0.4.42/Check { test: false }/TargetInner { ..: lib_target("chrono", ["lib"], "C:\\Users\\user\\.cargo\\registry\\src\\index.crates.io-6f17d22bba15001f\\chrono-0.4.42\\src/lib.rs", Edition2021) }
-   1.849935500s  INFO prepare_target{force=false package_id=chrono v0.4.42 target="chrono"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(Stale)
-   1.852122000s  INFO prepare_target{force=false package_id=num-traits v0.2.19 target="num_traits"}: cargo::core::compiler::fingerprint: fingerprint dirty for num-traits v0.2.19/Check { test: false }/TargetInner { name_inferred: true, ..: lib_target("num_traits", ["lib"], "C:\\Users\\user\\.cargo\\registry\\src\\index.crates.io-6f17d22bba15001f\\num-traits-0.2.19\\src\\lib.rs", Edition2021) }
-   1.852218500s  INFO prepare_target{force=false package_id=num-traits v0.2.19 target="num_traits"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(Stale)
-   2.142043100s  INFO prepare_target{force=false package_id=graft v0.6.0 (C:\Users\user\graft\src-tauri) target="graft_lib"}: cargo::core::compiler::fingerprint: fingerprint dirty for graft v0.6.0 (C:\Users\user\graft\src-tauri)/Check { test: true }/TargetInner { ..: lib_target("graft_lib", ["staticlib", "cdylib", "rlib"], "C:\\Users\\user\\graft\\src-tauri\\src\\lib.rs", Edition2021) }
-   2.142155300s  INFO prepare_target{force=false package_id=graft v0.6.0 (C:\Users\user\graft\src-tauri) target="graft_lib"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(Stale)
-   2.144458900s  INFO prepare_target{force=false package_id=graft v0.6.0 (C:\Users\user\graft\src-tauri) target="graft"}: cargo::core::compiler::fingerprint: fingerprint dirty for graft v0.6.0 (C:\Users\user\graft\src-tauri)/Check { test: false }/TargetInner { name: "graft", doc: true, ..: with_path("C:\\Users\\user\\graft\\src-tauri\\src/main.rs", Edition2021) }
-   2.144521200s  INFO prepare_target{force=false package_id=graft v0.6.0 (C:\Users\user\graft\src-tauri) target="graft"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(Stale)
-   2.147061500s  INFO prepare_target{force=false package_id=graft v0.6.0 (C:\Users\user\graft\src-tauri) target="graft"}: cargo::core::compiler::fingerprint: fingerprint dirty for graft v0.6.0 (C:\Users\user\graft\src-tauri)/Check { test: true }/TargetInner { name: "graft", doc: true, ..: with_path("C:\\Users\\user\\graft\\src-tauri\\src/main.rs", Edition2021) }
-   2.147131500s  INFO prepare_target{force=false package_id=graft v0.6.0 (C:\Users\user\graft\src-tauri) target="graft"}: cargo::core::compiler::fingerprint:     dirty: FsStatusOutdated(Stale)
-    Checking num-traits v0.2.19
-    Checking chrono v0.4.42
-    Checking graft v0.6.0 (C:\Users\user\graft\src-tauri)
-error: could not compile `graft` (lib) due to 5 previous errors
-warning: build failed, waiting for other jobs to finish...
-error: could not compile `graft` (lib test) due to 5 previous errors
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.21s
