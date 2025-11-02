@@ -23,6 +23,7 @@ import {
   RebaseResult
 } from "./components/rebase";
 import { StashPanel } from "./components/stash";
+import { CommandPalette, createCommands, type CommandActions } from "./components/command-palette";
 
 interface RepoInfo {
   name: string;
@@ -388,6 +389,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [showLegend, setShowLegend] = useState(false);
   const [showStats, setShowStats] = useState(false);
   const [rightPanelTab, setRightPanelTab] = useState<'details' | 'staging'>('staging');
@@ -444,6 +446,9 @@ function App() {
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; commit: Commit } | null>(null);
   
+  // Command Palette state
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  
   const listContainerRef = useRef<HTMLDivElement>(null);
 
   // Save branch sidebar state to localStorage whenever it changes
@@ -477,6 +482,12 @@ function App() {
         setSearchOpen(true);
       }
 
+      // Cmd+K (Mac) or Ctrl+K (Windows/Linux) to open command palette
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setCommandPaletteOpen(true);
+      }
+
       // Cmd+B (Mac) or Ctrl+B (Windows/Linux) to toggle branch sidebar
       if ((e.metaKey || e.ctrlKey) && e.key === "b") {
         e.preventDefault();
@@ -502,10 +513,44 @@ function App() {
         }
       }
 
+      // Cmd+R (Mac) or Ctrl+R (Windows/Linux) to refresh repository
+      if ((e.metaKey || e.ctrlKey) && e.key === "r") {
+        e.preventDefault();
+        if (repoInfo) {
+          handleBranchChange(); // Refresh everything
+        }
+      }
+
+      // Cmd+Shift+P (Mac) or Ctrl+Shift+P (Windows/Linux) to push
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "P") {
+        e.preventDefault();
+        if (repoInfo) {
+          setPushDialogOpen(true);
+        }
+      }
+
+      // Cmd+Shift+L (Mac) or Ctrl+Shift+L (Windows/Linux) to pull
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "L") {
+        e.preventDefault();
+        if (repoInfo) {
+          setPullDialogOpen(true);
+        }
+      }
+
+      // Cmd+Shift+F (Mac) or Ctrl+Shift+F (Windows/Linux) to fetch
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "F") {
+        e.preventDefault();
+        if (repoInfo) {
+          handleFetch();
+        }
+      }
+
       // Escape to close search or deselect
       if (e.key === "Escape") {
         if (searchOpen) {
           setSearchOpen(false);
+        } else if (commandPaletteOpen) {
+          setCommandPaletteOpen(false);
         } else {
           setSelectedCommitIndex(-1);
         }
@@ -530,7 +575,7 @@ function App() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [repoInfo, commits.length, selectedCommitIndex, searchOpen]);
+  }, [repoInfo, commits.length, selectedCommitIndex, searchOpen, commandPaletteOpen]);
 
   // Close context menu when clicking outside
   useEffect(() => {
@@ -968,6 +1013,98 @@ function App() {
     setContextMenu(null);
   };
 
+  // Create command actions for command palette
+  const commandActions: CommandActions = {
+    // Repository
+    openRepository: handleOpenRepo,
+    refreshRepository: handleBranchChange, // Reuse branch change handler which refreshes everything
+    
+    // Staging
+    stageAll: () => {
+      // This will be handled by StagingArea component, just focus on it
+      setRightPanelTab('staging');
+    },
+    unstageAll: () => {
+      setRightPanelTab('staging');
+    },
+    discardAll: () => {
+      setRightPanelTab('staging');
+    },
+    commit: () => {
+      setRightPanelTab('staging');
+    },
+    
+    // Branches
+    toggleBranchSidebar: () => setShowBranchSidebar((prev: boolean) => !prev),
+    createBranch: () => {
+      if (repoInfo) {
+        setBranchModalMode('create');
+        setBranchModalOpen(true);
+      }
+    },
+    switchBranch: () => {
+      if (repoInfo) {
+        setShowBranchSidebar(true); // Show sidebar so user can select
+      }
+    },
+    deleteBranch: () => {
+      if (repoInfo) {
+        setShowBranchSidebar(true); // Show sidebar so user can right-click to delete
+      }
+    },
+    
+    // Remote
+    push: () => {
+      if (repoInfo) setPushDialogOpen(true);
+    },
+    pull: () => {
+      if (repoInfo) setPullDialogOpen(true);
+    },
+    fetch: handleFetch,
+    
+    // Stash
+    toggleStashSidebar: () => setShowStashSidebar((prev: boolean) => !prev),
+    createStash: () => {
+      setShowStashSidebar(true); // Show stash sidebar so user can create
+    },
+    applyStash: () => {
+      setShowStashSidebar(true); // Show stash sidebar so user can apply
+    },
+    popStash: () => {
+      setShowStashSidebar(true); // Show stash sidebar so user can pop
+    },
+    
+    // View
+    toggleSearch: () => setSearchOpen(prev => !prev),
+    focusStaging: () => setRightPanelTab('staging'),
+    focusCommits: () => {
+      setRightPanelTab('details');
+      if (commits.length > 0 && selectedCommitIndex < 0) {
+        setSelectedCommitIndex(0); // Select first commit
+      }
+    },
+    
+    // Search
+    searchCommits: () => setSearchOpen(true),
+    quickSearch: () => setSearchOpen(true), // For now, same as searchCommits
+    
+    // Help
+    showShortcuts: () => {
+      // TODO: Implement shortcuts overlay in Phase 9.2
+      console.log('Shortcuts overlay coming in Phase 9.2!');
+    },
+    showCommandPalette: () => setCommandPaletteOpen(true),
+    
+    // Context checks
+    hasRepo: () => repoInfo !== null,
+    hasChanges: () => repoInfo !== null, // Simplified for now
+    hasBranches: () => repoInfo !== null,
+    hasStashes: () => repoInfo !== null,
+  };
+
+  // Create commands with actions for the command palette
+  const paletteCommands = createCommands(commandActions);
+
   return (
     <div className="flex flex-col h-screen bg-zinc-950 text-zinc-100">
       {/* Header */}
@@ -1304,6 +1441,14 @@ function App() {
         onSelect={handleSelectCommit}
       />
 
+      {/* Command Palette */}
+      <CommandPalette
+        isOpen={commandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
+        commands={paletteCommands}
+        recentCommands={[]} // TODO: Track recent commands in Phase 9.2
+      />
+
       {/* Context Menu for Commits */}
       {contextMenu && (
         <div
@@ -1371,7 +1516,7 @@ function App() {
       {/* Status Bar */}
       <footer className="px-6 py-2 border-t border-zinc-800 bg-zinc-900 text-xs text-zinc-500 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <span>Phase 7: Interactive Rebase 🎯 (In Progress)</span>
+          <span>Phase 9: Keyboard & Speed ⚡ (In Progress)</span>
           {commits.length > 0 && (
             <>
               <span className="text-zinc-600">│</span>
@@ -1386,6 +1531,9 @@ function App() {
           )}
         </div>
         <div className="flex items-center gap-2 text-xs">
+          <span className="font-mono">{shortcutKey}+K</span>
+          <span className="text-zinc-600">Commands</span>
+          <span className="text-zinc-600">│</span>
           <span className="font-mono">↑↓</span>
           <span className="text-zinc-600">Navigate</span>
           <span className="text-zinc-600">│</span>
