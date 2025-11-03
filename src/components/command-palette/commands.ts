@@ -1,6 +1,5 @@
 // Command Registry - All available commands for the palette
 import { Command } from './types';
-import type { CommandCategory } from './types';
 
 // Re-export types for convenience
 export type { Command, CommandCategory } from './types';

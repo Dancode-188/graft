@@ -1,6 +1,5 @@
 // Quick Search Engine - Unified search across all data types
 import { SearchResult } from './types';
-import type { SearchResultType } from './types';
 
 /**
  * Simple fuzzy match score calculator
