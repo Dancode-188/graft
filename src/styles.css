@@ -2,22 +2,137 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================
+   CSS Variables - Theme System
+   ============================================ */
+:root {
+  /* Colors are set dynamically by ThemeProvider */
+  /* See src/contexts/ThemeContext.tsx */
+  
+  /* Font settings */
+  --font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-size: 14px;
+  --font-mono: 'Fira Code', 'Courier New', monospace;
+  
+  /* Transition timings */
+  --transition-fast: 150ms;
+  --transition-normal: 250ms;
+  --transition-slow: 350ms;
+  
+  /* UI density (set by preferences) */
+  --spacing-unit: 1rem;
+  --border-radius: 0.375rem;
+}
+
+/* UI Density Variations */
+[data-density="compact"] {
+  --spacing-unit: 0.75rem;
+  --border-radius: 0.25rem;
+}
+
+[data-density="spacious"] {
+  --spacing-unit: 1.25rem;
+  --border-radius: 0.5rem;
+}
+
 @layer base {
   body {
-    @apply bg-zinc-950 text-zinc-100;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-      sans-serif;
+    background-color: var(--color-background);
+    color: var(--color-text-primary);
+    font-family: var(--font-family);
+    font-size: var(--font-size);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background-color var(--transition-normal) ease,
+                color var(--transition-normal) ease;
   }
 
   code, kbd {
-    font-family: 'Fira Code', 'Courier New', monospace;
+    font-family: var(--font-mono);
   }
 }
 
-/* Animations */
+/* ============================================
+   Theme-specific Scrollbars
+   ============================================ */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 5px;
+  transition: background-color var(--transition-fast);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-hover);
+}
+
+/* ============================================
+   Monaco Editor Diff Highlighting
+   ============================================ */
+[data-theme="dark"] .diff-addition-line {
+  background-color: rgba(34, 197, 94, 0.15) !important;
+}
+
+[data-theme="dark"] .diff-deletion-line {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+}
+
+[data-theme="dark"] .diff-hunk-line {
+  background-color: rgba(6, 182, 212, 0.15) !important;
+  color: #67e8f9 !important;
+}
+
+[data-theme="dark"] .diff-header-line {
+  background-color: rgba(63, 63, 70, 0.5) !important;
+  color: #a1a1aa !important;
+}
+
+[data-theme="dark"] .diff-addition-glyph {
+  background-color: rgba(34, 197, 94, 0.3) !important;
+}
+
+[data-theme="dark"] .diff-deletion-glyph {
+  background-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+/* Light theme diff styles */
+[data-theme="light"] .diff-addition-line {
+  background-color: rgba(5, 150, 105, 0.1) !important;
+}
+
+[data-theme="light"] .diff-deletion-line {
+  background-color: rgba(220, 38, 38, 0.1) !important;
+}
+
+[data-theme="light"] .diff-hunk-line {
+  background-color: rgba(8, 145, 178, 0.1) !important;
+  color: #0e7490 !important;
+}
+
+[data-theme="light"] .diff-header-line {
+  background-color: rgba(229, 229, 229, 0.5) !important;
+  color: #666666 !important;
+}
+
+[data-theme="light"] .diff-addition-glyph {
+  background-color: rgba(5, 150, 105, 0.2) !important;
+}
+
+[data-theme="light"] .diff-deletion-glyph {
+  background-color: rgba(220, 38, 38, 0.2) !important;
+}
+
+/* ============================================
+   Animations
+   ============================================ */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -91,53 +206,6 @@
   animation: spin 1s linear infinite;
 }
 
-/* Custom scrollbar for dark theme */
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-::-webkit-scrollbar-track {
-  background: #18181b;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #3f3f46;
-  border-radius: 5px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #52525b;
-}
-
-/* Monaco Editor Diff Highlighting */
-.diff-addition-line {
-  background-color: rgba(34, 197, 94, 0.15) !important;
-}
-
-.diff-deletion-line {
-  background-color: rgba(239, 68, 68, 0.15) !important;
-}
-
-.diff-hunk-line {
-  background-color: rgba(6, 182, 212, 0.15) !important;
-  color: #67e8f9 !important;
-}
-
-.diff-header-line {
-  background-color: rgba(63, 63, 70, 0.5) !important;
-  color: #a1a1aa !important;
-}
-
-.diff-addition-glyph {
-  background-color: rgba(34, 197, 94, 0.3) !important;
-}
-
-.diff-deletion-glyph {
-  background-color: rgba(239, 68, 68, 0.3) !important;
-}
-
-/* Scale-in animation for dialogs */
 @keyframes scale-in {
   from {
     opacity: 0;
@@ -151,4 +219,21 @@
 
 .animate-scale-in {
   animation: scale-in 0.2s ease-out forwards;
+}
+
+/* Theme transition animation */
+@keyframes theme-fade {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.theme-transitioning {
+  animation: theme-fade var(--transition-normal) ease;
 }
