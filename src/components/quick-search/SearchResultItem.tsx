@@ -30,8 +30,8 @@ export const SearchResultItem = memo(function SearchResultItem({
       className={`w-full px-4 py-3 flex items-center gap-3 text-left
                   transition-colors ${
                     isSelected 
-                      ? 'bg-zinc-800 border-l-2 border-indigo-500' 
-                      : 'hover:bg-zinc-850 border-l-2 border-transparent'
+                      ? 'bg-theme-surface-hover border-l-2 border-indigo-500' 
+                      : 'hover:bg-theme-surface-hover border-l-2 border-transparent'
                   }`}
       role="option"
       aria-selected={isSelected}
@@ -42,18 +42,18 @@ export const SearchResultItem = memo(function SearchResultItem({
       
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <div className="text-zinc-200 font-medium truncate">{result.title}</div>
+        <div className="text-theme-primary font-medium truncate">{result.title}</div>
         {result.subtitle && (
-          <div className="text-xs text-zinc-500 truncate">{result.subtitle}</div>
+          <div className="text-xs text-theme-tertiary truncate">{result.subtitle}</div>
         )}
       </div>
       
       {/* Type badge and description */}
       <div className="flex items-center gap-2 flex-shrink-0">
         {result.description && (
-          <span className="text-xs text-zinc-500">{result.description}</span>
+          <span className="text-xs text-theme-tertiary">{result.description}</span>
         )}
-        <span className={`text-xs px-2 py-0.5 rounded bg-zinc-800 ${typeColors[result.type]}`}>
+        <span className={`text-xs px-2 py-0.5 rounded bg-theme-bg ${typeColors[result.type]}`}>
           {result.type}
         </span>
       </div>

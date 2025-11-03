@@ -57,29 +57,29 @@ export function KeyboardShortcuts({ isOpen, onClose }: KeyboardShortcutsProps) {
     <>
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50"
+        className="fixed inset-0 bg-theme-overlay backdrop-blur-sm z-50"
         onClick={onClose}
       />
       
       {/* Modal */}
       <div className="fixed inset-0 flex items-center justify-center p-8 z-50 pointer-events-none">
         <div 
-          className="bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl w-full max-w-4xl 
+          className="bg-theme-surface border border-theme-default rounded-lg shadow-2xl w-full max-w-4xl 
                      max-h-[85vh] pointer-events-auto flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="p-6 border-b border-zinc-800">
+          <div className="p-6 border-b border-theme-default">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-2xl font-bold text-zinc-100">Keyboard Shortcuts</h2>
-                <p className="text-sm text-zinc-500 mt-1">
+                <h2 className="text-2xl font-bold text-theme-primary">Keyboard Shortcuts</h2>
+                <p className="text-sm text-theme-tertiary mt-1">
                   {ALL_SHORTCUTS.length} shortcuts available
                 </p>
               </div>
               <button
                 onClick={onClose}
-                className="text-zinc-500 hover:text-zinc-300 transition-colors"
+                className="text-theme-tertiary hover:text-theme-primary transition-colors"
                 title="Close (Esc)"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -90,7 +90,7 @@ export function KeyboardShortcuts({ isOpen, onClose }: KeyboardShortcutsProps) {
 
             {/* Search */}
             <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-tertiary">
                 🔍
               </div>
               <input
@@ -99,9 +99,9 @@ export function KeyboardShortcuts({ isOpen, onClose }: KeyboardShortcutsProps) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search shortcuts..."
-                className="w-full bg-zinc-800 text-zinc-200 pl-10 pr-4 py-2.5 rounded-md
-                          placeholder-zinc-500 focus:outline-none focus:ring-2 
-                          focus:ring-indigo-500 border border-zinc-700"
+                className="w-full bg-theme-bg text-theme-primary pl-10 pr-4 py-2.5 rounded-md
+                          placeholder-theme-tertiary focus:outline-none focus:ring-2 
+                          focus:ring-indigo-500 border border-theme-default"
               />
             </div>
           </div>
@@ -109,7 +109,7 @@ export function KeyboardShortcuts({ isOpen, onClose }: KeyboardShortcutsProps) {
           {/* Shortcuts Grid */}
           <div className="overflow-y-auto flex-1 p-6">
             {filteredGroups.length === 0 ? (
-              <div className="text-center py-12 text-zinc-500">
+              <div className="text-center py-12 text-theme-tertiary">
                 No shortcuts found matching "{searchQuery}"
               </div>
             ) : (
@@ -117,7 +117,7 @@ export function KeyboardShortcuts({ isOpen, onClose }: KeyboardShortcutsProps) {
                 {filteredGroups.map(group => (
                   <div key={group.category}>
                     {/* Category Header */}
-                    <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-4">
+                    <h3 className="text-sm font-semibold text-theme-secondary uppercase tracking-wider mb-4">
                       {group.label}
                     </h3>
                     
@@ -130,9 +130,9 @@ export function KeyboardShortcuts({ isOpen, onClose }: KeyboardShortcutsProps) {
                           <div
                             key={index}
                             className="flex items-center justify-between p-3 rounded-lg
-                                     bg-zinc-800/50 hover:bg-zinc-800 transition-colors"
+                                     bg-theme-bg hover:bg-theme-surface-hover transition-colors"
                           >
-                            <span className="text-zinc-200">{shortcut.description}</span>
+                            <span className="text-theme-primary">{shortcut.description}</span>
                             <ShortcutKeys keys={keys} />
                           </div>
                         );
@@ -145,9 +145,9 @@ export function KeyboardShortcuts({ isOpen, onClose }: KeyboardShortcutsProps) {
           </div>
 
           {/* Footer */}
-          <div className="p-4 border-t border-zinc-800 text-center">
-            <p className="text-xs text-zinc-500">
-              Press <kbd className="px-2 py-0.5 bg-zinc-800 border border-zinc-700 rounded text-zinc-400">Esc</kbd> to close
+          <div className="p-4 border-t border-theme-default text-center">
+            <p className="text-xs text-theme-tertiary">
+              Press <kbd className="px-2 py-0.5 bg-theme-bg border border-theme-default rounded text-theme-secondary">Esc</kbd> to close
             </p>
           </div>
         </div>

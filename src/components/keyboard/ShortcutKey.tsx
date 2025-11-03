@@ -13,10 +13,10 @@ export function ShortcutKey({ children, className = '' }: ShortcutKeyProps) {
         inline-flex items-center justify-center
         min-w-[2rem] h-8 px-2
         text-sm font-mono font-medium
-        bg-zinc-800 
-        border border-zinc-700 
+        bg-theme-bg 
+        border border-theme-default 
         rounded
-        text-zinc-300
+        text-theme-secondary
         shadow-sm
         ${className}
       `}
@@ -41,7 +41,7 @@ export function ShortcutKeys({ keys, separator = '+' }: ShortcutKeysProps) {
         <div key={index} className="flex items-center gap-1">
           <ShortcutKey>{key}</ShortcutKey>
           {index < keys.length - 1 && (
-            <span className="text-zinc-600 text-xs">{separator}</span>
+            <span className="text-theme-tertiary text-xs">{separator}</span>
           )}
         </div>
       ))}
