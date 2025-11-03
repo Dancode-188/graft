@@ -27,6 +27,7 @@ import { CommandPalette, createCommands, type CommandActions } from "./component
 import { KeyboardShortcuts } from "./components/keyboard";
 import { QuickSearch } from "./components/quick-search";
 import { StashEntry } from "./components/stash/types";
+import { ThemeToggle } from "./components/ThemeToggle";
 
 interface RepoInfo {
   name: string;
@@ -1833,6 +1834,9 @@ function App() {
           onCancel={() => setPushDialogOpen(false)}
         />
       )}
+
+      {/* Theme Toggle - Debug/Testing Component */}
+      <ThemeToggle />
     </div>
   );
 }
