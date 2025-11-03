@@ -130,9 +130,51 @@ Existing Git GUIs are either:
 
 ---
 
+## 📥 Installation
+
+### Download Graft
+
+**Latest Release**: [v1.0.1](https://github.com/yourusername/graft/releases/latest)
+
+#### Windows
+1. Download one of the installers:
+   - **Recommended**: `Graft_1.0.1_x64-setup.exe` (NSIS installer)
+   - **Alternative**: `Graft_1.0.1_x64_en-US.msi` (MSI installer)
+
+2. Run the installer
+
+3. **Windows SmartScreen Warning** ⚠️
+   
+   You may see a "Windows protected your PC" warning. This is normal for open-source applications that don't have a paid code-signing certificate ($300-500/year).
+   
+   **Graft is completely safe** - the code is open source and auditable.
+   
+   **To install**:
+   - Click **"More info"**
+   - Click **"Run anyway"**
+   
+   This warning appears for most open-source Windows apps, including early versions of VS Code and many other trusted tools.
+
+4. Launch Graft from Start Menu
+
+#### macOS / Linux
+Building from source is currently required (see Development Setup below).
+
+---
+
 ## 🚀 Getting Started
 
-### Prerequisites
+### Quick Start (After Installation)
+
+1. Launch Graft
+2. Press `Ctrl+O` (or click "Open Repository") to select a Git repository
+3. Explore your commit history!
+4. Press `Ctrl+K` to open the command palette
+5. Press `Ctrl+/` to see all keyboard shortcuts
+
+### Building from Source
+
+#### Prerequisites
 
 Before building Graft, ensure you have:
 
@@ -458,6 +500,83 @@ If you like Graft, give it a ⭐ on GitHub!
 | Dark Theme | ✅ Complete |
 | Theme System | ✅ Complete |
 | v1.0.0 Status | ✅ Production Ready |
+
+---
+
+## 🔧 Troubleshooting
+
+### Windows SmartScreen Warning
+
+**Issue**: "Windows protected your PC" warning appears when installing.
+
+**Solution**: This is expected for unsigned apps.
+1. Click **"More info"**
+2. Click **"Run anyway"**
+
+**Why this happens**: Graft is not code-signed (certificates cost $300-500/year). This is normal for open-source software. The code is completely safe and auditable on GitHub.
+
+---
+
+### Push/Pull Authentication
+
+**Issue**: Push or Pull operations fail with authentication errors.
+
+**Solution**: Configure your Git credentials for remote operations.
+
+#### For SSH (Recommended):
+```bash
+# 1. Generate SSH key (if you don't have one)
+ssh-keygen -t ed25519 -C "your_email@example.com"
+
+# 2. Add to ssh-agent
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/id_ed25519
+
+# 3. Add public key to GitHub/GitLab
+cat ~/.ssh/id_ed25519.pub
+# Copy and paste to GitHub Settings → SSH Keys
+```
+
+#### For HTTPS:
+```bash
+# Configure Git credential helper
+git config --global credential.helper store
+# Next push/pull will ask for credentials once
+```
+
+After configuring credentials once, Graft will use your system's Git configuration for all operations.
+
+---
+
+### Can't Open Repository
+
+**Issue**: "Failed to open repository" error.
+
+**Solutions**:
+- Ensure the selected folder is a valid Git repository (contains `.git` folder)
+- Check you have read permissions for the directory
+- Try closing and reopening Graft
+- Check the repository isn't corrupted: `git status` in terminal
+
+---
+
+### Performance Issues
+
+**Issue**: Slow performance with large repositories.
+
+**Solutions**:
+- Graft handles 10,000+ commits smoothly
+- If experiencing slowness, check available RAM
+- Try closing other resource-intensive applications
+- Consider using `git gc` to optimize your repository
+
+---
+
+### Need More Help?
+
+- 🐛 **Report bugs**: [GitHub Issues](https://github.com/yourusername/graft/issues)
+- 💬 **Get help**: [GitHub Discussions](https://github.com/yourusername/graft/discussions)
+- 📖 **Documentation**: [Full docs](./README.md)
 
 ---
 
