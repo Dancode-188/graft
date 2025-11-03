@@ -1325,10 +1325,10 @@ function App() {
                 </div>
               )}
 
-              <p className="text-xs text-zinc-600 mt-4">
-                <kbd className="px-2 py-1 bg-zinc-800 rounded text-zinc-300">{shortcutKey}+O</kbd> Open
+              <p className="text-xs text-theme-tertiary mt-4">
+                <kbd className="px-2 py-1 bg-theme-bg rounded text-theme-secondary">{shortcutKey}+O</kbd> Open
                 {" | "}
-                <kbd className="px-2 py-1 bg-zinc-800 rounded text-zinc-300">{shortcutKey}+F</kbd> Search
+                <kbd className="px-2 py-1 bg-theme-bg rounded text-theme-secondary">{shortcutKey}+F</kbd> Search
               </p>
             </div>
           </div>
@@ -1480,7 +1480,7 @@ function App() {
                     />
                     <button
                       onClick={() => setShowLegend(false)}
-                      className="absolute -top-2 -right-2 w-6 h-6 bg-zinc-800 hover:bg-zinc-700 rounded-full text-xs text-zinc-400 hover:text-zinc-200 flex items-center justify-center"
+                      className="absolute -top-2 -right-2 w-6 h-6 bg-theme-bg hover:bg-theme-surface-hover rounded-full text-xs text-theme-secondary hover:text-theme-primary flex items-center justify-center"
                     >
                       ✕
                     </button>
@@ -1497,7 +1497,7 @@ function App() {
                     />
                     <button
                       onClick={() => setShowStats(false)}
-                      className="absolute -top-2 -right-2 w-6 h-6 bg-zinc-800 hover:bg-zinc-700 rounded-full text-xs text-zinc-400 hover:text-zinc-200 flex items-center justify-center"
+                      className="absolute -top-2 -right-2 w-6 h-6 bg-theme-bg hover:bg-theme-surface-hover rounded-full text-xs text-theme-secondary hover:text-theme-primary flex items-center justify-center"
                     >
                       ✕
                     </button>
@@ -1616,7 +1616,7 @@ function App() {
       {/* Context Menu for Commits */}
       {contextMenu && (
         <div
-          className="fixed z-50 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl py-1 min-w-[200px]"
+          className="fixed z-50 bg-theme-surface border border-theme-default rounded-lg shadow-2xl py-1 min-w-[200px]"
           style={{
             left: `${contextMenu.x}px`,
             top: `${contextMenu.y}px`,
@@ -1624,43 +1624,43 @@ function App() {
         >
           <button
             onClick={() => handleContextMenuAction('rebase')}
-            className="w-full px-4 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+            className="w-full px-4 py-2 text-left text-sm text-theme-primary hover:bg-theme-surface-hover transition-colors flex items-center gap-2"
           >
             <span>🔀</span>
             <span>Interactive Rebase from Here</span>
           </button>
           <button
             onClick={() => handleContextMenuAction('checkout')}
-            className="w-full px-4 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+            className="w-full px-4 py-2 text-left text-sm text-theme-primary hover:bg-theme-surface-hover transition-colors flex items-center gap-2"
           >
             <span>↪️</span>
             <span>Checkout Commit</span>
           </button>
           <button
             onClick={() => handleContextMenuAction('cherrypick')}
-            className="w-full px-4 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+            className="w-full px-4 py-2 text-left text-sm text-theme-primary hover:bg-theme-surface-hover transition-colors flex items-center gap-2"
           >
             <span>🍒</span>
             <span>Cherry-pick</span>
           </button>
           <button
             onClick={() => handleContextMenuAction('revert')}
-            className="w-full px-4 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+            className="w-full px-4 py-2 text-left text-sm text-theme-primary hover:bg-theme-surface-hover transition-colors flex items-center gap-2"
           >
             <span>⎌</span>
             <span>Revert Commit</span>
           </button>
-          <div className="h-px bg-zinc-700 my-1" />
+          <div className="h-px bg-theme-default my-1" />
           <button
             onClick={() => handleContextMenuAction('copyHash')}
-            className="w-full px-4 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+            className="w-full px-4 py-2 text-left text-sm text-theme-primary hover:bg-theme-surface-hover transition-colors flex items-center gap-2"
           >
             <span>📋</span>
             <span>Copy Hash</span>
           </button>
           <button
             onClick={() => handleContextMenuAction('copyMessage')}
-            className="w-full px-4 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+            className="w-full px-4 py-2 text-left text-sm text-theme-primary hover:bg-theme-surface-hover transition-colors flex items-center gap-2"
           >
             <span>📝</span>
             <span>Copy Message</span>
