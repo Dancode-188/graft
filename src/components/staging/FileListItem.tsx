@@ -9,15 +9,15 @@ interface FileListItemProps {
 // Get icon and color for file status
 function getStatusIcon(status: string): { icon: string; color: string; label: string } {
   const statusMap = {
-    modified: { icon: 'M', color: 'text-blue-400 bg-blue-950 border-blue-700', label: 'Modified' },
-    added: { icon: 'A', color: 'text-green-400 bg-green-950 border-green-700', label: 'Added' },
-    deleted: { icon: 'D', color: 'text-red-400 bg-red-950 border-red-700', label: 'Deleted' },
-    renamed: { icon: 'R', color: 'text-yellow-400 bg-yellow-950 border-yellow-700', label: 'Renamed' },
-    conflicted: { icon: 'C', color: 'text-orange-400 bg-orange-950 border-orange-700', label: 'Conflicted' },
+    modified: { icon: 'M', color: 'text-git-modified bg-git-modified/10 border-git-modified/30', label: 'Modified' },
+    added: { icon: 'A', color: 'text-git-added bg-git-added/10 border-git-added/30', label: 'Added' },
+    deleted: { icon: 'D', color: 'text-git-deleted bg-git-deleted/10 border-git-deleted/30', label: 'Deleted' },
+    renamed: { icon: 'R', color: 'text-git-renamed bg-git-renamed/10 border-git-renamed/30', label: 'Renamed' },
+    conflicted: { icon: 'C', color: 'text-git-conflict bg-git-conflict/10 border-git-conflict/30', label: 'Conflicted' },
   };
   return statusMap[status as keyof typeof statusMap] || { 
     icon: '?', 
-    color: 'text-gray-400 bg-gray-950 border-gray-700', 
+    color: 'text-theme-tertiary bg-theme-surface border-theme-border', 
     label: 'Unknown' 
   };
 }
@@ -34,7 +34,7 @@ export function FileListItem({ path, status, isStaged, onClick, onContextMenu }:
           onContextMenu(e.clientX, e.clientY);
         }
       }}
-      className="w-full px-3 py-2 text-left hover:bg-zinc-800 active:bg-zinc-700 transition-colors group"
+      className="w-full px-3 py-2 text-left hover:bg-theme-surface-hover active:bg-theme-surface-hover transition-colors group"
     >
       <div className="flex items-center gap-2">
         {/* Status Badge */}
@@ -45,12 +45,12 @@ export function FileListItem({ path, status, isStaged, onClick, onContextMenu }:
         </span>
 
         {/* File Path */}
-        <span className="text-sm text-zinc-300 font-mono truncate flex-1">
+        <span className="text-sm text-theme-primary font-mono truncate flex-1">
           {path}
         </span>
 
         {/* Action Hint */}
-        <span className="text-xs text-zinc-600 group-hover:text-zinc-400 transition-colors">
+        <span className="text-xs text-theme-tertiary group-hover:text-theme-secondary transition-colors">
           {isStaged ? '←' : '→'}
         </span>
       </div>

@@ -162,17 +162,17 @@ export function StagingArea({ repoPath, onCommitCreated }: StagingAreaProps) {
     }
   };
   return (
-    <div className="flex flex-col h-full bg-zinc-900">
+    <div className="flex flex-col h-full bg-theme-surface">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-zinc-800">
+      <div className="px-4 py-3 border-b border-theme-default">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-zinc-300 uppercase tracking-wider">
+          <h3 className="text-sm font-semibold text-theme-primary uppercase tracking-wider">
             Staging Area
           </h3>
           <button
             onClick={loadStatus}
             disabled={loading}
-            className="text-xs px-2 py-1 bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 rounded transition-colors disabled:opacity-50"
+            className="text-xs px-2 py-1 bg-theme-surface-hover hover:bg-theme-surface-hover active:bg-theme-surface-hover rounded transition-colors disabled:opacity-50"
           >
             {loading ? '↻' : '↻ Refresh'}
           </button>
@@ -189,19 +189,19 @@ export function StagingArea({ repoPath, onCommitCreated }: StagingAreaProps) {
       {/* Split Pane: Unstaged | Staged */}
       <div className="flex-1 overflow-hidden flex flex-col">
         {/* Unstaged Files */}
-        <div className="flex-1 flex flex-col min-h-0 border-b border-zinc-800">
-          <div className="px-4 py-2 bg-zinc-900 border-b border-zinc-800">
-            <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+        <div className="flex-1 flex flex-col min-h-0 border-b border-theme-default">
+          <div className="px-4 py-2 bg-theme-surface border-b border-theme-default">
+            <h4 className="text-xs font-semibold text-theme-secondary uppercase tracking-wider">
               Unstaged Changes ({status.unstaged.length})
             </h4>
           </div>
           <div className="flex-1 overflow-y-auto">
             {status.unstaged.length === 0 ? (
-              <div className="p-8 text-center text-zinc-600 text-sm">
+              <div className="p-8 text-center text-theme-tertiary text-sm">
                 No unstaged changes
               </div>
             ) : (
-              <div className="divide-y divide-zinc-900">
+              <div className="divide-y divide-theme-default">
                 {status.unstaged.map((file) => (
                   <FileListItem
                     key={file.path}
@@ -218,18 +218,18 @@ export function StagingArea({ repoPath, onCommitCreated }: StagingAreaProps) {
         </div>
         {/* Staged Files */}
         <div className="flex-1 flex flex-col min-h-0">
-          <div className="px-4 py-2 bg-zinc-900 border-b border-zinc-800">
-            <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+          <div className="px-4 py-2 bg-theme-surface border-b border-theme-default">
+            <h4 className="text-xs font-semibold text-theme-secondary uppercase tracking-wider">
               Staged Changes ({status.staged.length})
             </h4>
           </div>
           <div className="flex-1 overflow-y-auto">
             {status.staged.length === 0 ? (
-              <div className="p-8 text-center text-zinc-600 text-sm">
+              <div className="p-8 text-center text-theme-tertiary text-sm">
                 No staged changes
               </div>
             ) : (
-              <div className="divide-y divide-zinc-900">
+              <div className="divide-y divide-theme-default">
                 {status.staged.map((file) => (
                   <FileListItem
                     key={file.path}
@@ -246,7 +246,7 @@ export function StagingArea({ repoPath, onCommitCreated }: StagingAreaProps) {
         </div>
       </div>
       {/* Commit Section */}
-      <div className="border-t border-zinc-800 p-4 bg-zinc-900">
+      <div className="border-t border-theme-default p-4 bg-theme-surface">
         <CommitMessageInput
           value={commitMessage}
           onChange={setCommitMessage}
@@ -257,7 +257,7 @@ export function StagingArea({ repoPath, onCommitCreated }: StagingAreaProps) {
         <button
           onClick={handleCommit}
           disabled={committing || status.staged.length === 0 || commitMessage.trim() === ''}
-          className="w-full mt-3 px-4 py-2 bg-graft-600 hover:bg-graft-700 active:bg-graft-800 disabled:bg-zinc-800 disabled:text-zinc-600 rounded-lg font-medium text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-graft-500"
+          className="w-full mt-3 px-4 py-2 bg-graft-600 hover:bg-graft-700 active:bg-graft-800 disabled:bg-theme-surface disabled:text-theme-tertiary rounded-lg font-medium text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-graft-500"
         >
           {committing ? 'Committing...' : `Commit ${status.staged.length} file${status.staged.length !== 1 ? 's' : ''}`}
         </button>
@@ -266,7 +266,7 @@ export function StagingArea({ repoPath, onCommitCreated }: StagingAreaProps) {
       {/* Context Menu for Files */}
       {contextMenu && (
         <div
-          className="fixed z-50 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl py-1 min-w-[180px]"
+          className="fixed z-50 bg-theme-surface border border-theme-default rounded-lg shadow-2xl py-1 min-w-[180px]"
           style={{
             left: contextMenu.x,
             top: contextMenu.y,
@@ -276,7 +276,7 @@ export function StagingArea({ repoPath, onCommitCreated }: StagingAreaProps) {
           {!contextMenu.file.is_staged ? (
             <button
               onClick={() => handleFileContextAction('stage')}
-              className="w-full px-4 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+              className="w-full px-4 py-2 text-left text-sm text-theme-primary hover:bg-theme-surface-hover transition-colors flex items-center gap-2"
             >
               <span>✅</span>
               <span>Stage File</span>
@@ -284,7 +284,7 @@ export function StagingArea({ repoPath, onCommitCreated }: StagingAreaProps) {
           ) : (
             <button
               onClick={() => handleFileContextAction('unstage')}
-              className="w-full px-4 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+              className="w-full px-4 py-2 text-left text-sm text-theme-primary hover:bg-theme-surface-hover transition-colors flex items-center gap-2"
             >
               <span>↩️</span>
               <span>Unstage File</span>
@@ -293,16 +293,16 @@ export function StagingArea({ repoPath, onCommitCreated }: StagingAreaProps) {
           {!contextMenu.file.is_staged && contextMenu.file.status !== 'added' && (
             <button
               onClick={() => handleFileContextAction('discard')}
-              className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+              className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-theme-surface-hover transition-colors flex items-center gap-2"
             >
               <span>🗑️</span>
               <span>Discard Changes</span>
             </button>
           )}
-          <div className="h-px bg-zinc-700 my-1" />
+          <div className="h-px bg-theme-border my-1" />
           <button
             onClick={() => handleFileContextAction('copyPath')}
-            className="w-full px-4 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+            className="w-full px-4 py-2 text-left text-sm text-theme-primary hover:bg-theme-surface-hover transition-colors flex items-center gap-2"
           >
             <span>📋</span>
             <span>Copy Path</span>
