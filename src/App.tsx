@@ -1250,14 +1250,14 @@ function App() {
   const paletteCommands = createCommands(commandActions);
 
   return (
-    <div className="flex flex-col h-screen bg-zinc-950 text-zinc-100">
+    <div className="flex flex-col h-screen bg-theme-bg text-theme-primary">
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-zinc-800">
+      <header className="flex items-center justify-between px-6 py-4 border-b border-theme-default">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold tracking-tight">
             <span className="text-graft-500">Graft</span>
           </h1>
-          <span className="text-xs text-zinc-500 font-mono">v0.5.0</span>
+          <span className="text-xs text-theme-tertiary font-mono">v0.5.0</span>
           
           {/* Branch Sidebar Toggle Button (only show when repo is open) */}
           {repoInfo && (
@@ -1267,7 +1267,7 @@ function App() {
                 className={`ml-2 px-3 py-1.5 text-xs rounded transition-all ${
                   showBranchSidebar
                     ? 'bg-graft-600/20 text-graft-400 border border-graft-600/30'
-                    : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:border-zinc-600 hover:text-zinc-300'
+                    : 'bg-theme-surface text-theme-secondary border border-theme-default hover:border-theme-hover hover:text-theme-primary'
                 }`}
                 title={`${showBranchSidebar ? 'Hide' : 'Show'} Branches (${shortcutKey}+B)`}
               >
@@ -1280,7 +1280,7 @@ function App() {
                 className={`ml-2 px-3 py-1.5 text-xs rounded transition-all ${
                   showStashSidebar
                     ? 'bg-graft-600/20 text-graft-400 border border-graft-600/30'
-                    : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:border-zinc-600 hover:text-zinc-300'
+                    : 'bg-theme-surface text-theme-secondary border border-theme-default hover:border-theme-hover hover:text-theme-primary'
                 }`}
                 title={`${showStashSidebar ? 'Hide' : 'Show'} Stashes (${shortcutKey}+Shift+S)`}
               >
@@ -1290,10 +1290,10 @@ function App() {
           )}
         </div>
         {repoInfo && (
-          <div className="flex items-center gap-2 text-sm text-zinc-400">
-            <span className="text-zinc-600">│</span>
+          <div className="flex items-center gap-2 text-sm text-theme-secondary">
+            <span className="text-theme-tertiary">│</span>
             <span className="font-mono">{repoInfo.name}</span>
-            <span className="text-zinc-600">│</span>
+            <span className="text-theme-tertiary">│</span>
             <span className="text-graft-500">{repoInfo.current_branch}</span>
           </div>
         )}
@@ -1306,14 +1306,14 @@ function App() {
             <div className="flex flex-col items-center gap-6 max-w-md text-center animate-fade-in">
               <div className="text-6xl mb-4">🌿</div>
               <h2 className="text-3xl font-semibold mb-2">Welcome to Graft</h2>
-              <p className="text-zinc-400 mb-6">
+              <p className="text-theme-secondary mb-6">
                 A fast, beautiful, keyboard-first Git GUI that doesn't suck.
               </p>
 
               <button
                 onClick={handleOpenRepo}
                 disabled={loading}
-                className="px-6 py-3 bg-graft-600 hover:bg-graft-700 active:bg-graft-800 disabled:bg-zinc-800 disabled:text-zinc-500 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-graft-500 focus:ring-offset-2 focus:ring-offset-zinc-950"
+                className="px-6 py-3 bg-graft-600 hover:bg-graft-700 active:bg-graft-800 disabled:bg-theme-surface disabled:text-theme-tertiary rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-graft-500 focus:ring-offset-2 focus:ring-offset-theme-bg"
               >
                 {loading ? "Opening..." : "Open Repository"}
               </button>
@@ -1714,36 +1714,36 @@ function App() {
       )}
 
       {/* Status Bar */}
-      <footer className="px-6 py-2 border-t border-zinc-800 bg-zinc-900 text-xs text-zinc-500 flex items-center justify-between">
+      <footer className="px-6 py-2 border-t border-theme-default bg-theme-surface text-xs text-theme-tertiary flex items-center justify-between">
         <div className="flex items-center gap-4">
           <span>Phase 9: Keyboard & Speed ⚡ (In Progress)</span>
           {commits.length > 0 && (
             <>
-              <span className="text-zinc-600">│</span>
+              <span className="text-theme-tertiary">│</span>
               <span>{commits.length} commits loaded</span>
             </>
           )}
           {selectedCommit && (
             <>
-              <span className="text-zinc-600">│</span>
+              <span className="text-theme-tertiary">│</span>
               <span className="text-graft-400">{selectedCommitIndex + 1} of {commits.length}</span>
             </>
           )}
         </div>
         <div className="flex items-center gap-2 text-xs">
           <span className="font-mono">{shortcutKey}+K</span>
-          <span className="text-zinc-600">Commands</span>
-          <span className="text-zinc-600">│</span>
+          <span className="text-theme-tertiary">Commands</span>
+          <span className="text-theme-tertiary">│</span>
           <span className="font-mono">↑↓</span>
-          <span className="text-zinc-600">Navigate</span>
-          <span className="text-zinc-600">│</span>
+          <span className="text-theme-tertiary">Navigate</span>
+          <span className="text-theme-tertiary">│</span>
           <span className="font-mono">{shortcutKey}+B</span>
-          <span className="text-zinc-600">Branches</span>
-          <span className="text-zinc-600">│</span>
+          <span className="text-theme-tertiary">Branches</span>
+          <span className="text-theme-tertiary">│</span>
           <span className="font-mono">{shortcutKey}+F</span>
-          <span className="text-zinc-600">Search</span>
-          <span className="text-zinc-600">│</span>
-          <span className="text-zinc-600">Ready</span>
+          <span className="text-theme-tertiary">Search</span>
+          <span className="text-theme-tertiary">│</span>
+          <span className="text-theme-tertiary">Ready</span>
         </div>
       </footer>
 
