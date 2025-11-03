@@ -138,8 +138,8 @@ function CommitDetailsPanel({
 
   if (!commit) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-zinc-900 p-6">
-        <div className="text-center text-zinc-500">
+      <div className="flex-1 flex items-center justify-center bg-theme-surface p-6">
+        <div className="text-center text-theme-tertiary">
           <p className="text-sm">Select a commit to view details</p>
         </div>
       </div>
@@ -147,17 +147,17 @@ function CommitDetailsPanel({
   }
 
   return (
-    <div className="h-full flex flex-col overflow-hidden bg-zinc-900">
+    <div className="h-full flex flex-col overflow-hidden bg-theme-surface">
       {/* Scrollable Content Container */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
         {/* Details Header */}
-        <div className="border-b border-zinc-800 p-4">
+        <div className="border-b border-theme-default p-4">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-semibold text-zinc-100 mb-2 line-clamp-2">
+              <h3 className="text-sm font-semibold text-theme-primary mb-2 line-clamp-2">
                 {commit.message.split('\n')[0]}
               </h3>
-              <div className="space-y-1 text-xs text-zinc-400">
+              <div className="space-y-1 text-xs text-theme-secondary">
                 <div className="font-mono">{commit.hash}</div>
                 <div>{commit.author_name} ({commit.author_email})</div>
                 <div>{formatDate(commit.timestamp)}</div>
@@ -165,7 +165,7 @@ function CommitDetailsPanel({
             </div>
             <button
               onClick={onClose}
-              className="flex-shrink-0 text-zinc-400 hover:text-zinc-200 transition-colors"
+              className="flex-shrink-0 text-theme-secondary hover:text-theme-primary transition-colors"
             >
               ✕
             </button>
@@ -174,8 +174,8 @@ function CommitDetailsPanel({
 
         {/* Full Message */}
         {commit.message.split('\n').length > 1 && (
-          <div className="border-b border-zinc-800 p-4">
-            <p className="text-xs text-zinc-300 whitespace-pre-wrap font-mono bg-zinc-950 p-2 rounded border border-zinc-800">
+          <div className="border-b border-theme-default p-4">
+            <p className="text-xs text-theme-primary whitespace-pre-wrap font-mono bg-theme-bg p-2 rounded border border-theme-default">
               {commit.message}
             </p>
           </div>
@@ -183,8 +183,8 @@ function CommitDetailsPanel({
 
         {/* Tags Section */}
         {commit.tags && commit.tags.length > 0 && (
-          <div className="border-b border-zinc-800 p-4">
-            <h4 className="text-xs font-semibold text-zinc-300 mb-2 uppercase tracking-wider">
+          <div className="border-b border-theme-default p-4">
+            <h4 className="text-xs font-semibold text-theme-primary mb-2 uppercase tracking-wider">
               Tags ({commit.tags.length})
             </h4>
             <div className="flex flex-wrap gap-2">
@@ -208,12 +208,12 @@ function CommitDetailsPanel({
 
         {/* Files List and Diff Section */}
         <div className="p-4">
-        <h4 className="text-xs font-semibold text-zinc-300 mb-3 uppercase tracking-wider">
+        <h4 className="text-xs font-semibold text-theme-primary mb-3 uppercase tracking-wider">
           Files Changed ({files.length})
         </h4>
 
         {loadingFiles && (
-          <div className="text-center py-8 text-zinc-500 text-sm">
+          <div className="text-center py-8 text-theme-tertiary text-sm">
             Loading files...
           </div>
         )}
@@ -225,7 +225,7 @@ function CommitDetailsPanel({
         )}
 
         {!loadingFiles && files.length === 0 && (
-          <div className="text-center py-8 text-zinc-500 text-sm">
+          <div className="text-center py-8 text-theme-tertiary text-sm">
             No files changed
           </div>
         )}
@@ -242,14 +242,14 @@ function CommitDetailsPanel({
                   className={`p-2 rounded transition-colors text-xs font-mono cursor-pointer ${
                     isSelected
                       ? 'bg-cyan-900 bg-opacity-30 border border-cyan-700'
-                      : 'hover:bg-zinc-800 border border-transparent'
+                      : 'hover:bg-theme-surface-hover border border-transparent'
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <span className={statusInfo.color}>{statusInfo.icon}</span>
-                    <span className="text-zinc-300">{statusInfo.label}</span>
+                    <span className="text-theme-primary">{statusInfo.label}</span>
                   </div>
-                  <div className="text-zinc-400 truncate pl-4 break-all">
+                  <div className="text-theme-secondary truncate pl-4 break-all">
                     {file.path}
                   </div>
                 </div>
@@ -273,7 +273,7 @@ function CommitDetailsPanel({
       </div>
 
       {/* Summary Footer - Fixed at bottom */}
-      <div className="flex-shrink-0 border-t border-zinc-800 p-3 bg-zinc-950 text-xs text-zinc-400">
+      <div className="flex-shrink-0 border-t border-theme-default p-3 bg-theme-bg text-xs text-theme-tertiary">
         <div className="flex items-center justify-between">
           <span>{files.length} files changed</span>
           <span>{commit.parent_hashes.length} parent(s)</span>
@@ -1519,15 +1519,15 @@ function App() {
 
         {/* Right Panel with Tabs */}
         {repoInfo && (
-          <div className="w-80 border-l border-zinc-800 bg-zinc-900 flex flex-col">
+          <div className="w-80 border-l border-theme-default bg-theme-surface flex flex-col">
             {/* Tab Header */}
-            <div className="border-b border-zinc-800 flex">
+            <div className="border-b border-theme-default flex">
               <button
                 onClick={() => setRightPanelTab('staging')}
                 className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
                   rightPanelTab === 'staging'
-                    ? 'bg-zinc-950 text-zinc-100 border-b-2 border-graft-500'
-                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800'
+                    ? 'bg-theme-bg text-theme-primary border-b-2 border-graft-500'
+                    : 'text-theme-tertiary hover:text-theme-primary hover:bg-theme-surface-hover'
                 }`}
               >
                 📝 Staging
@@ -1536,8 +1536,8 @@ function App() {
                 onClick={() => setRightPanelTab('details')}
                 className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
                   rightPanelTab === 'details'
-                    ? 'bg-zinc-950 text-zinc-100 border-b-2 border-graft-500'
-                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800'
+                    ? 'bg-theme-bg text-theme-primary border-b-2 border-graft-500'
+                    : 'text-theme-tertiary hover:text-theme-primary hover:bg-theme-surface-hover'
                 }`}
               >
                 🔍 Details
