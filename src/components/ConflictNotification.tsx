@@ -69,7 +69,7 @@ export function ConflictNotification({
           </button>
           <button
             onClick={onDismiss}
-            className="px-3 py-2 text-sm bg-zinc-800 hover:bg-zinc-700 rounded-lg font-medium transition-colors"
+            className="px-3 py-2 text-sm bg-theme-bg hover:bg-theme-surface-hover rounded-lg font-medium transition-colors"
           >
             Dismiss
           </button>
