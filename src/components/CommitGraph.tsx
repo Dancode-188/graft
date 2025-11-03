@@ -295,15 +295,15 @@ export const CommitGraph: React.FC<CommitGraphProps> = React.memo(({
     <svg
       width={graphWidth}
       height={graphHeight}
-      className="bg-zinc-950"
+      className="bg-theme-bg"
       style={{ minHeight: '100%' }}
     >
       <defs>
         {/* Gradient for visual appeal */}
         <linearGradient id="graphGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#22c55e" stopOpacity="0.1" />
-          <stop offset="50%" stopColor="#3b82f6" stopOpacity="0.1" />
-          <stop offset="100%" stopColor="#ec4899" stopOpacity="0.1" />
+          <stop offset="0%" stopColor="#22c55e" stopOpacity="0.05" />
+          <stop offset="50%" stopColor="#3b82f6" stopOpacity="0.05" />
+          <stop offset="100%" stopColor="#ec4899" stopOpacity="0.05" />
         </linearGradient>
       </defs>
 

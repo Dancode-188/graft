@@ -136,11 +136,11 @@ export function StashPanel({ repoPath, onRefresh }: StashPanelProps) {
   };
 
   return (
-    <div className="h-full flex flex-col bg-zinc-900">
+    <div className="h-full flex flex-col bg-theme-surface">
       {/* Header */}
-      <div className="flex-shrink-0 border-b border-zinc-800 p-3">
+      <div className="flex-shrink-0 border-b border-theme-default p-3">
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-semibold text-zinc-200 uppercase tracking-wider">
+          <h2 className="text-sm font-semibold text-theme-primary uppercase tracking-wider">
             Stashes
           </h2>
           <button
@@ -152,7 +152,7 @@ export function StashPanel({ repoPath, onRefresh }: StashPanelProps) {
           </button>
         </div>
         {stashes.length > 0 && (
-          <p className="text-xs text-zinc-500">
+          <p className="text-xs text-theme-tertiary">
             {stashes.length} stash{stashes.length !== 1 ? 'es' : ''}
           </p>
         )}
@@ -161,7 +161,7 @@ export function StashPanel({ repoPath, onRefresh }: StashPanelProps) {
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
         {loading ? (
-          <div className="flex items-center justify-center h-32 text-zinc-500 text-sm">
+          <div className="flex items-center justify-center h-32 text-theme-tertiary text-sm">
             Loading stashes...
           </div>
         ) : error ? (
@@ -172,8 +172,8 @@ export function StashPanel({ repoPath, onRefresh }: StashPanelProps) {
         ) : stashes.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full p-6 text-center">
             <div className="text-4xl mb-3 opacity-50">💾</div>
-            <p className="text-sm text-zinc-400 mb-2">No stashes yet</p>
-            <p className="text-xs text-zinc-600 mb-4 max-w-xs">
+            <p className="text-sm text-theme-secondary mb-2">No stashes yet</p>
+            <p className="text-xs text-theme-tertiary mb-4 max-w-xs">
               Stashes let you save your work-in-progress without committing. 
               Perfect for switching branches or pulling updates.
             </p>
@@ -217,7 +217,7 @@ export function StashPanel({ repoPath, onRefresh }: StashPanelProps) {
       {/* Context Menu */}
       {contextMenu && (
         <div
-          className="fixed bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl py-1 z-50 min-w-[180px]"
+          className="fixed bg-theme-surface border border-theme-default rounded-lg shadow-2xl py-1 z-50 min-w-[180px]"
           style={{
             left: contextMenu.x,
             top: contextMenu.y,
@@ -226,36 +226,36 @@ export function StashPanel({ repoPath, onRefresh }: StashPanelProps) {
         >
           <button
             onClick={() => handleContextAction('preview')}
-            className="w-full px-4 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+            className="w-full px-4 py-2 text-left text-sm text-theme-primary hover:bg-theme-surface-hover transition-colors flex items-center gap-2"
           >
             <span>👁️</span>
             <span>Preview</span>
           </button>
           <button
             onClick={() => handleContextAction('apply')}
-            className="w-full px-4 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+            className="w-full px-4 py-2 text-left text-sm text-theme-primary hover:bg-theme-surface-hover transition-colors flex items-center gap-2"
           >
             <span>✅</span>
             <span>Apply (keep)</span>
           </button>
           <button
             onClick={() => handleContextAction('pop')}
-            className="w-full px-4 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+            className="w-full px-4 py-2 text-left text-sm text-theme-primary hover:bg-theme-surface-hover transition-colors flex items-center gap-2"
           >
             <span>⚡</span>
             <span>Pop (apply & remove)</span>
           </button>
-          <div className="h-px bg-zinc-700 my-1" />
+          <div className="h-px bg-theme-border my-1" />
           <button
             onClick={() => handleContextAction('copyId')}
-            className="w-full px-4 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+            className="w-full px-4 py-2 text-left text-sm text-theme-primary hover:bg-theme-surface-hover transition-colors flex items-center gap-2"
           >
             <span>📋</span>
             <span>Copy ID</span>
           </button>
           <button
             onClick={() => handleContextAction('drop')}
-            className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-zinc-800 transition-colors flex items-center gap-2"
+            className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-theme-surface-hover transition-colors flex items-center gap-2"
           >
             <span>🗑️</span>
             <span>Drop (delete)</span>

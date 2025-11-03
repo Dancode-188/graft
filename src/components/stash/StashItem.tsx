@@ -31,7 +31,7 @@ export function StashItem({ stash, onPreview, onApply, onDrop, onContextMenu }: 
 
   return (
     <div 
-      className="bg-zinc-800/50 hover:bg-zinc-800 rounded border border-zinc-700 hover:border-zinc-600 transition-all p-3 group"
+      className="bg-theme-surface-hover hover:bg-theme-surface-hover rounded border border-theme-default hover:border-theme-hover transition-all p-3 group"
       onContextMenu={(e) => {
         e.preventDefault();
         if (onContextMenu) {
@@ -46,19 +46,19 @@ export function StashItem({ stash, onPreview, onApply, onDrop, onContextMenu }: 
             <span className="text-xs font-mono text-graft-400 font-semibold">
               stash@{'{' + stash.index + '}'}
             </span>
-            <span className="text-xs text-zinc-500">•</span>
-            <span className="text-xs text-zinc-400">
+            <span className="text-xs text-theme-tertiary">•</span>
+            <span className="text-xs text-theme-secondary">
               {getRelativeTime(stash.timestamp)}
             </span>
           </div>
-          <p className="text-sm text-zinc-200 line-clamp-2 mb-1">
+          <p className="text-sm text-theme-primary line-clamp-2 mb-1">
             {displayMessage}
           </p>
         </div>
       </div>
 
       {/* Metadata */}
-      <div className="flex items-center gap-3 text-xs text-zinc-500 mb-2">
+      <div className="flex items-center gap-3 text-xs text-theme-tertiary mb-2">
         <div className="flex items-center gap-1">
           <span>🌿</span>
           <span className="font-mono">{stash.branch}</span>
@@ -74,7 +74,7 @@ export function StashItem({ stash, onPreview, onApply, onDrop, onContextMenu }: 
       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
           onClick={() => onPreview(stash)}
-          className="px-2 py-1 text-xs bg-zinc-700 hover:bg-zinc-600 text-zinc-200 rounded transition-colors"
+          className="px-2 py-1 text-xs bg-theme-surface hover:bg-theme-surface-hover text-theme-primary rounded transition-colors"
           title="Preview stash contents"
         >
           👁️ Preview
