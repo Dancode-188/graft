@@ -1257,7 +1257,7 @@ function App() {
           <h1 className="text-2xl font-bold tracking-tight">
             <span className="text-graft-500">Graft</span>
           </h1>
-          <span className="text-xs text-theme-tertiary font-mono">v0.5.0</span>
+          <span className="text-xs text-theme-tertiary font-mono">v1.0.0</span>
           
           {/* Branch Sidebar Toggle Button (only show when repo is open) */}
           {repoInfo && (
