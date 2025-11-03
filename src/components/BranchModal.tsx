@@ -110,11 +110,11 @@ export function BranchModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-lg shadow-2xl w-full max-w-md mx-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-theme-overlay backdrop-blur-sm">
+      <div className="bg-theme-surface border border-theme-default rounded-lg shadow-2xl w-full max-w-md mx-4">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-zinc-800">
-          <h2 className="text-lg font-semibold text-zinc-100">
+        <div className="px-6 py-4 border-b border-theme-default">
+          <h2 className="text-lg font-semibold text-theme-primary">
             {mode === 'create' && '🌿 Create New Branch'}
             {mode === 'rename' && '✏️ Rename Branch'}
             {mode === 'delete' && '🗑️ Delete Branch'}
@@ -127,7 +127,7 @@ export function BranchModal({
             {mode === 'create' && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  <label className="block text-sm font-medium text-theme-secondary mb-2">
                     Branch Name
                   </label>
                   <input
@@ -135,13 +135,13 @@ export function BranchModal({
                     value={branchName}
                     onChange={(e) => setBranchName(e.target.value)}
                     placeholder="e.g., feature/new-feature"
-                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-graft-500 focus:border-transparent"
+                    className="w-full px-3 py-2 bg-theme-bg border border-theme-default rounded text-theme-primary placeholder-theme-tertiary focus:outline-none focus:ring-2 focus:ring-graft-500 focus:border-transparent"
                     autoFocus
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  <label className="block text-sm font-medium text-theme-secondary mb-2">
                     Start Point
                   </label>
                   <input
@@ -149,9 +149,9 @@ export function BranchModal({
                     value={startPoint}
                     onChange={(e) => setStartPoint(e.target.value)}
                     placeholder="HEAD"
-                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-graft-500 focus:border-transparent"
+                    className="w-full px-3 py-2 bg-theme-bg border border-theme-default rounded text-theme-primary placeholder-theme-tertiary focus:outline-none focus:ring-2 focus:ring-graft-500 focus:border-transparent"
                   />
-                  <p className="mt-1 text-xs text-zinc-500">
+                  <p className="mt-1 text-xs text-theme-tertiary">
                     Branch name or commit hash to start from (default: HEAD)
                   </p>
                 </div>
@@ -162,9 +162,9 @@ export function BranchModal({
                     id="checkout"
                     checked={checkoutAfterCreate}
                     onChange={(e) => setCheckoutAfterCreate(e.target.checked)}
-                    className="w-4 h-4 text-graft-500 bg-zinc-800 border-zinc-700 rounded focus:ring-graft-500"
+                    className="w-4 h-4 text-graft-500 bg-theme-bg border-theme-default rounded focus:ring-graft-500"
                   />
-                  <label htmlFor="checkout" className="ml-2 text-sm text-zinc-300">
+                  <label htmlFor="checkout" className="ml-2 text-sm text-theme-secondary">
                     Switch to new branch after creation
                   </label>
                 </div>
@@ -174,19 +174,19 @@ export function BranchModal({
             {mode === 'rename' && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  <label className="block text-sm font-medium text-theme-secondary mb-2">
                     Current Name
                   </label>
                   <input
                     type="text"
                     value={currentBranch || ''}
                     disabled
-                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-zinc-500 cursor-not-allowed"
+                    className="w-full px-3 py-2 bg-theme-bg border border-theme-default rounded text-theme-tertiary cursor-not-allowed"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  <label className="block text-sm font-medium text-theme-secondary mb-2">
                     New Name
                   </label>
                   <input
@@ -194,7 +194,7 @@ export function BranchModal({
                     value={branchName}
                     onChange={(e) => setBranchName(e.target.value)}
                     placeholder="Enter new branch name"
-                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-graft-500 focus:border-transparent"
+                    className="w-full px-3 py-2 bg-theme-bg border border-theme-default rounded text-theme-primary placeholder-theme-tertiary focus:outline-none focus:ring-2 focus:ring-graft-500 focus:border-transparent"
                     autoFocus
                   />
                 </div>
@@ -218,9 +218,9 @@ export function BranchModal({
                     id="force"
                     checked={forceDelete}
                     onChange={(e) => setForceDelete(e.target.checked)}
-                    className="w-4 h-4 text-red-500 bg-zinc-800 border-zinc-700 rounded focus:ring-red-500"
+                    className="w-4 h-4 text-red-500 bg-theme-bg border-theme-default rounded focus:ring-red-500"
                   />
-                  <label htmlFor="force" className="ml-2 text-sm text-zinc-300">
+                  <label htmlFor="force" className="ml-2 text-sm text-theme-secondary">
                     Force delete (even if not merged)
                   </label>
                 </div>
@@ -236,12 +236,12 @@ export function BranchModal({
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 border-t border-zinc-800 flex items-center justify-end gap-3">
+          <div className="px-6 py-4 border-t border-theme-default flex items-center justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-4 py-2 text-sm text-zinc-400 hover:text-zinc-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-2 text-sm text-theme-secondary hover:text-theme-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Cancel
             </button>
