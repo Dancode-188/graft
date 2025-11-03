@@ -4,13 +4,13 @@ export function ThemeToggle() {
   const { theme, themeMode, toggleTheme, setThemeMode } = useTheme();
   
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 shadow-lg">
-      <span className="text-xs text-zinc-400">Theme:</span>
+    <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 bg-theme-surface border border-theme-default rounded-lg px-3 py-2 shadow-lg">
+      <span className="text-xs text-theme-tertiary">Theme:</span>
       
       {/* Quick toggle button */}
       <button
         onClick={toggleTheme}
-        className="p-2 rounded hover:bg-zinc-700 transition-colors"
+        className="p-2 rounded hover:bg-theme-surface-hover transition-colors"
         title={`Switch to ${theme.mode === 'dark' ? 'light' : 'dark'} theme`}
       >
         {theme.mode === 'dark' ? (
@@ -28,14 +28,14 @@ export function ThemeToggle() {
       <select
         value={themeMode}
         onChange={(e) => setThemeMode(e.target.value as any)}
-        className="text-xs bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-300 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+        className="text-xs bg-theme-bg border border-theme-default rounded px-2 py-1 text-theme-secondary focus:outline-none focus:ring-1 focus:ring-emerald-500"
       >
         <option value="dark">Dark</option>
         <option value="light">Light</option>
         <option value="auto">Auto</option>
       </select>
       
-      <span className="text-xs text-zinc-500">
+      <span className="text-xs text-theme-tertiary">
         ({theme.name})
       </span>
     </div>

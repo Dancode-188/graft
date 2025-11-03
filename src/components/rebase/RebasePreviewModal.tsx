@@ -118,7 +118,7 @@ export function RebasePreviewModal({
           </button>
           <button
             onClick={onConfirm}
-            className="px-6 py-2 text-sm font-semibold bg-graft-500 text-zinc-900 rounded-lg hover:bg-graft-400 shadow-lg shadow-graft-500/20 transition-all"
+            className="px-6 py-2 text-sm font-semibold bg-graft-500 text-white rounded-lg hover:bg-graft-400 shadow-lg shadow-graft-500/20 transition-all"
           >
             Start Rebase
           </button>

@@ -50,7 +50,7 @@ export function ProgressToast({
           ? 'bg-red-950 border-red-800' 
           : isComplete
           ? 'bg-green-950 border-green-800'
-          : 'bg-zinc-900 border-zinc-700'
+          : 'bg-theme-surface border-theme-default'
       }`}
     >
       <div className="p-4">
@@ -61,7 +61,7 @@ export function ProgressToast({
               {isError ? '⚠️' : isComplete ? '✅' : operationIcons[operation]}
             </span>
             <span className={`font-semibold ${
-              isError ? 'text-red-200' : isComplete ? 'text-green-200' : 'text-zinc-100'
+              isError ? 'text-red-200' : isComplete ? 'text-green-200' : 'text-theme-primary'
             }`}>
               {isError 
                 ? `${operationNames[operation]} Failed` 
@@ -74,7 +74,7 @@ export function ProgressToast({
           {onClose && (
             <button
               onClick={onClose}
-              className="text-zinc-500 hover:text-zinc-300 transition-colors"
+              className="text-theme-tertiary hover:text-theme-secondary transition-colors"
             >
               ✕
             </button>
@@ -84,13 +84,13 @@ export function ProgressToast({
         {/* Progress Bar (only show if not complete and not error) */}
         {!isComplete && !isError && (
           <div className="mb-3">
-            <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+            <div className="w-full h-2 bg-theme-bg rounded-full overflow-hidden">
               <div 
                 className="h-full bg-graft-500 transition-all duration-300 ease-out"
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <div className="flex items-center justify-between mt-1 text-xs text-zinc-400">
+            <div className="flex items-center justify-between mt-1 text-xs text-theme-tertiary">
               <span>{Math.round(progress)}%</span>
               {current !== undefined && total !== undefined && (
                 <span>{current} / {total}</span>
@@ -101,7 +101,7 @@ export function ProgressToast({
 
         {/* Stage/Message */}
         <div className={`text-sm ${
-          isError ? 'text-red-300' : isComplete ? 'text-green-300' : 'text-zinc-400'
+          isError ? 'text-red-300' : isComplete ? 'text-green-300' : 'text-theme-tertiary'
         }`}>
           {message || stage}
         </div>

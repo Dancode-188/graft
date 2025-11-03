@@ -304,7 +304,7 @@ export function InteractiveRebaseModal({
                 px-6 py-2 text-sm font-semibold rounded-lg transition-all
                 ${
                   canProceed
-                    ? "bg-graft-500 text-zinc-900 hover:bg-graft-400 shadow-lg shadow-graft-500/20"
+                    ? "bg-graft-500 text-white hover:bg-graft-400 shadow-lg shadow-graft-500/20"
                     : "bg-theme-bg text-theme-tertiary border-2 border-theme-default cursor-not-allowed"
                 }
               `}

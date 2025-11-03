@@ -58,7 +58,7 @@ export function RemoteStatusBar({ repoPath, currentBranch, onRefresh }: RemoteSt
 
   if (loading && !status) {
     return (
-      <span className="text-xs text-zinc-500">
+      <span className="text-xs text-theme-tertiary">
         Loading remote status...
       </span>
     );
@@ -78,7 +78,7 @@ export function RemoteStatusBar({ repoPath, currentBranch, onRefresh }: RemoteSt
 
   if (!status.has_remote) {
     return (
-      <span className="text-xs text-zinc-500">
+      <span className="text-xs text-theme-tertiary">
         No remote configured
       </span>
     );
@@ -114,7 +114,7 @@ export function RemoteStatusBar({ repoPath, currentBranch, onRefresh }: RemoteSt
 
       {/* Remote name (shown on hover) */}
       <span 
-        className="text-zinc-600 cursor-help" 
+        className="text-theme-tertiary cursor-help" 
         title={`Remote: ${status.remote_name}\nURL: ${status.remote_url}`}
       >
         ({status.remote_name})
@@ -124,7 +124,7 @@ export function RemoteStatusBar({ repoPath, currentBranch, onRefresh }: RemoteSt
       <button
         onClick={handleRefresh}
         disabled={loading}
-        className="text-zinc-500 hover:text-zinc-300 disabled:opacity-50 transition-colors"
+        className="text-theme-tertiary hover:text-theme-secondary disabled:opacity-50 transition-colors"
         title="Refresh remote status"
       >
         {loading ? '⟳' : '↻'}

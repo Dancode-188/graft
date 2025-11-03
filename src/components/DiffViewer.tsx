@@ -74,7 +74,7 @@ export function DiffViewer({ repoPath, commitHash, filePath, fileName }: DiffVie
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64 text-zinc-500 text-sm">
+      <div className="flex items-center justify-center h-64 text-theme-tertiary text-sm">
         Loading diff...
       </div>
     );
@@ -92,7 +92,7 @@ export function DiffViewer({ repoPath, commitHash, filePath, fileName }: DiffVie
 
   if (!diff || diff.trim() === "") {
     return (
-      <div className="flex items-center justify-center h-64 text-zinc-500 text-sm">
+      <div className="flex items-center justify-center h-64 text-theme-tertiary text-sm">
         No diff available for this file
       </div>
     );
@@ -107,24 +107,24 @@ export function DiffViewer({ repoPath, commitHash, filePath, fileName }: DiffVie
   const language = getLanguage(fileName);
 
   return (
-    <div className="bg-zinc-950 border border-zinc-800 rounded-lg overflow-hidden">
+    <div className="bg-theme-bg border border-theme-default rounded-lg overflow-hidden">
       {/* Diff Header */}
-      <div className="bg-zinc-900 border-b border-zinc-800 px-4 py-2">
+      <div className="bg-theme-surface border-b border-theme-default px-4 py-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-zinc-400 text-xs font-semibold">DIFF</span>
-            <span className="text-zinc-500 text-xs">•</span>
-            <span className="text-zinc-300 text-xs font-mono truncate">{fileName}</span>
+            <span className="text-theme-tertiary text-xs font-semibold">DIFF</span>
+            <span className="text-theme-tertiary text-xs">•</span>
+            <span className="text-theme-secondary text-xs font-mono truncate">{fileName}</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="text-xs text-zinc-500">
+            <div className="text-xs text-theme-tertiary">
               <span className="text-green-400">+{additions}</span>
               {' / '}
               <span className="text-red-400">-{deletions}</span>
             </div>
             <button
               onClick={() => setViewMode(viewMode === 'monaco' ? 'basic' : 'monaco')}
-              className="text-xs px-3 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors font-medium"
+              className="text-xs px-3 py-1 rounded bg-theme-bg hover:bg-theme-surface-hover text-theme-secondary transition-colors font-medium"
               title={viewMode === 'monaco' ? "Switch to basic view" : "Switch to Monaco editor"}
             >
               {viewMode === 'monaco' ? '📝 Basic' : '✨ Monaco'}
@@ -224,13 +224,13 @@ export function DiffViewer({ repoPath, commitHash, filePath, fileName }: DiffVie
         <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
           <div className="font-mono text-xs">
             {lines.map((line, idx) => {
-              let bgColor = 'bg-zinc-900';
-              let textColor = 'text-zinc-300';
+              let bgColor = 'bg-theme-surface';
+              let textColor = 'text-theme-secondary';
               let lineMarker = ' ';
 
               if (line.startsWith('+++') || line.startsWith('---')) {
-                bgColor = 'bg-zinc-800';
-                textColor = 'text-zinc-400';
+                bgColor = 'bg-theme-bg';
+                textColor = 'text-theme-tertiary';
                 lineMarker = ' ';
               } else if (line.startsWith('@@')) {
                 bgColor = 'bg-cyan-950';
@@ -245,8 +245,8 @@ export function DiffViewer({ repoPath, commitHash, filePath, fileName }: DiffVie
                 textColor = 'text-red-300';
                 lineMarker = '-';
               } else if (line.startsWith('diff --git') || line.startsWith('index ')) {
-                bgColor = 'bg-zinc-800';
-                textColor = 'text-zinc-500';
+                bgColor = 'bg-theme-bg';
+                textColor = 'text-theme-tertiary';
                 lineMarker = ' ';
               }
 
@@ -255,7 +255,7 @@ export function DiffViewer({ repoPath, commitHash, filePath, fileName }: DiffVie
                   key={idx}
                   className={`${bgColor} ${textColor} flex hover:bg-opacity-60 transition-colors`}
                 >
-                  <span className="w-8 flex-shrink-0 text-center text-zinc-600 select-none border-r border-zinc-800">
+                  <span className="w-8 flex-shrink-0 text-center text-theme-tertiary select-none border-r border-theme-default">
                     {idx + 1}
                   </span>
                   <span className="w-4 flex-shrink-0 text-center select-none opacity-60">

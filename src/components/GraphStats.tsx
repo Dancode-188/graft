@@ -78,60 +78,60 @@ export const GraphStats: React.FC<GraphStatsProps> = ({ commits, repoName }) => 
   }, [commits]);
 
   return (
-    <div className="flex flex-col gap-3 p-4 bg-zinc-900 border border-zinc-800 rounded-lg text-xs">
-      <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">
+    <div className="flex flex-col gap-3 p-4 bg-theme-surface border border-theme-default rounded-lg text-xs">
+      <div className="text-xs font-semibold text-theme-tertiary uppercase tracking-wider mb-1">
         Repository Statistics
       </div>
 
       <div className="grid grid-cols-2 gap-2">
         {/* Total Commits */}
-        <div className="bg-zinc-950 p-2 rounded border border-zinc-800">
-          <div className="text-zinc-500 text-xs mb-1">Commits</div>
+        <div className="bg-theme-bg p-2 rounded border border-theme-default">
+          <div className="text-theme-tertiary text-xs mb-1">Commits</div>
           <div className="text-lg font-semibold text-green-400">{stats.totalCommits}</div>
         </div>
 
         {/* Merge Commits */}
-        <div className="bg-zinc-950 p-2 rounded border border-zinc-800">
-          <div className="text-zinc-500 text-xs mb-1">Merges</div>
+        <div className="bg-theme-bg p-2 rounded border border-theme-default">
+          <div className="text-theme-tertiary text-xs mb-1">Merges</div>
           <div className="text-lg font-semibold text-blue-400">{stats.mergeCommits}</div>
         </div>
 
         {/* Local Branches */}
-        <div className="bg-zinc-950 p-2 rounded border border-zinc-800">
-          <div className="text-zinc-500 text-xs mb-1">Local Branches</div>
+        <div className="bg-theme-bg p-2 rounded border border-theme-default">
+          <div className="text-theme-tertiary text-xs mb-1">Local Branches</div>
           <div className="text-lg font-semibold text-purple-400">{stats.localBranches}</div>
         </div>
 
         {/* Remote Branches */}
-        <div className="bg-zinc-950 p-2 rounded border border-zinc-800">
-          <div className="text-zinc-500 text-xs mb-1">Remote Branches</div>
+        <div className="bg-theme-bg p-2 rounded border border-theme-default">
+          <div className="text-theme-tertiary text-xs mb-1">Remote Branches</div>
           <div className="text-lg font-semibold text-blue-400">{stats.remoteBranches}</div>
         </div>
 
         {/* Unique Authors */}
-        <div className="bg-zinc-950 p-2 rounded border border-zinc-800">
-          <div className="text-zinc-500 text-xs mb-1">Authors</div>
+        <div className="bg-theme-bg p-2 rounded border border-theme-default">
+          <div className="text-theme-tertiary text-xs mb-1">Authors</div>
           <div className="text-lg font-semibold text-amber-400">{stats.uniqueAuthors}</div>
         </div>
 
         {/* Commits Per Day */}
-        <div className="bg-zinc-950 p-2 rounded border border-zinc-800">
-          <div className="text-zinc-500 text-xs mb-1">Avg per Day</div>
+        <div className="bg-theme-bg p-2 rounded border border-theme-default">
+          <div className="text-theme-tertiary text-xs mb-1">Avg per Day</div>
           <div className="text-lg font-semibold text-pink-400">{stats.commitsPerDay}</div>
         </div>
       </div>
 
       {/* Date Range */}
-      <div className="border-t border-zinc-800 pt-2 mt-1">
-        <div className="text-zinc-500 text-xs mb-1">Activity Range</div>
-        <div className="text-sm text-zinc-300">{stats.dateRange}</div>
+      <div className="border-t border-theme-default pt-2 mt-1">
+        <div className="text-theme-tertiary text-xs mb-1">Activity Range</div>
+        <div className="text-sm text-theme-secondary">{stats.dateRange}</div>
       </div>
 
       {/* Additional Info */}
       {repoName && (
-        <div className="border-t border-zinc-800 pt-2 mt-1">
-          <div className="text-zinc-500 text-xs mb-1">Repository</div>
-          <div className="text-sm text-zinc-300 truncate font-mono">{repoName}</div>
+        <div className="border-t border-theme-default pt-2 mt-1">
+          <div className="text-theme-tertiary text-xs mb-1">Repository</div>
+          <div className="text-sm text-theme-secondary truncate font-mono">{repoName}</div>
         </div>
       )}
     </div>
