@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Theme, ThemeMode, UserPreferences } from '../types/theme';
 import { themes } from '../styles/themes';
 import {

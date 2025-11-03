@@ -1,7 +1,6 @@
 // KeyboardShortcuts - Full-screen overlay showing all keyboard shortcuts
 import { useState, useEffect, useRef } from 'react';
 import { getShortcutsByCategory, formatShortcut, ALL_SHORTCUTS } from './shortcuts';
-import { KeyboardShortcut } from './types';
 import { ShortcutKeys } from './ShortcutKey';
 
 interface KeyboardShortcutsProps {

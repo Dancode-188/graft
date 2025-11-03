@@ -710,13 +710,13 @@ function App() {
     setRightPanelTab('details'); // Switch to details when selecting a commit
   };
 
-  const handleSelectBranch = (branchName: string) => {
+  const handleSelectBranch = (_branchName: string) => {
     // Show the branch sidebar when a branch is selected from quick search
     setShowBranchSidebar(true);
     // The BranchSidebar will highlight the selected branch
   };
 
-  const handleSelectStash = (stashIndex: number) => {
+  const handleSelectStash = (_stashIndex: number) => {
     // Show the stash sidebar when a stash is selected from quick search
     setShowStashSidebar(true);
     // The StashPanel will show the selected stash
