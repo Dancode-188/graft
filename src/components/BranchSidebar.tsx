@@ -142,22 +142,22 @@ export function BranchSidebar({ repoPath, onRefresh, onBranchAction }: BranchSid
 
   if (loading && branches.length === 0) {
     return (
-      <div className="w-45 border-r border-zinc-800 bg-zinc-900 flex items-center justify-center">
-        <div className="text-zinc-500 text-xs">Loading...</div>
+      <div className="w-45 border-r border-theme-default bg-theme-surface flex items-center justify-center">
+        <div className="text-theme-tertiary text-xs">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="w-45 border-r border-zinc-800 bg-zinc-900 flex flex-col relative">
+    <div className="w-45 border-r border-theme-default bg-theme-surface flex flex-col relative">
       {/* Header */}
-      <div className="px-3 py-3 border-b border-zinc-800">
+      <div className="px-3 py-3 border-b border-theme-default">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-zinc-300">🌿 Branches</h2>
+          <h2 className="text-sm font-semibold text-theme-primary">🌿 Branches</h2>
           <button
             onClick={loadBranches}
             disabled={loading}
-            className="text-zinc-500 hover:text-zinc-300 disabled:opacity-50 transition-colors"
+            className="text-theme-tertiary hover:text-theme-primary disabled:opacity-50 transition-colors"
             title="Refresh branches"
           >
             {loading ? '⟳' : '↻'}
@@ -170,7 +170,7 @@ export function BranchSidebar({ repoPath, onRefresh, onBranchAction }: BranchSid
           placeholder="Search..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full px-2 py-1.5 text-xs bg-zinc-800 border border-zinc-700 rounded focus:outline-none focus:ring-1 focus:ring-graft-500 focus:border-graft-500 text-zinc-200 placeholder-zinc-500"
+          className="w-full px-2 py-1.5 text-xs bg-theme-bg border border-theme-default rounded focus:outline-none focus:ring-1 focus:ring-graft-500 focus:border-graft-500 text-theme-primary placeholder-theme-tertiary"
         />
       </div>
 
@@ -185,11 +185,11 @@ export function BranchSidebar({ repoPath, onRefresh, onBranchAction }: BranchSid
       <div className="flex-1 overflow-y-auto">
         {/* Local Branches */}
         <div>
-          <div className="px-4 py-2 text-xs font-semibold text-zinc-500 uppercase tracking-wider bg-zinc-950">
+          <div className="px-4 py-2 text-xs font-semibold text-theme-tertiary uppercase tracking-wider bg-theme-bg">
             📁 Local ({localBranches.length})
           </div>
           {localBranches.length === 0 ? (
-            <div className="px-4 py-3 text-sm text-zinc-600">
+            <div className="px-4 py-3 text-sm text-theme-tertiary">
               No local branches found
             </div>
           ) : (
@@ -199,11 +199,11 @@ export function BranchSidebar({ repoPath, onRefresh, onBranchAction }: BranchSid
                 onClick={() => handleBranchClick(branch)}
                 onContextMenu={(e) => handleContextMenu(e, branch)}
                 title={`${branch.commit_message}\n${formatDate(branch.last_commit_date)}`}
-                className={`w-full px-3 py-2 text-left hover:bg-zinc-800 transition-colors border-l-2 ${
+                className={`w-full px-3 py-2 text-left hover:bg-theme-surface-hover transition-colors border-l-2 ${
                   branch.is_current
-                    ? 'border-graft-500 bg-zinc-800/50'
+                    ? 'border-graft-500 bg-theme-surface-hover'
                     : selectedBranch === branch.name
-                    ? 'border-blue-500 bg-zinc-800/30'
+                    ? 'border-blue-500 bg-theme-surface-hover/50'
                     : 'border-transparent'
                 }`}
               >
@@ -212,7 +212,7 @@ export function BranchSidebar({ repoPath, onRefresh, onBranchAction }: BranchSid
                     {branch.is_current ? '★' : '🌿'}
                   </span>
                   <span className={`text-xs truncate ${
-                    branch.is_current ? 'text-graft-400 font-semibold' : 'text-zinc-300'
+                    branch.is_current ? 'text-graft-400 font-semibold' : 'text-theme-primary'
                   }`}>
                     {branch.name}
                   </span>
@@ -226,7 +226,7 @@ export function BranchSidebar({ repoPath, onRefresh, onBranchAction }: BranchSid
         <div className="mt-2">
           <button
             onClick={() => setShowRemote(!showRemote)}
-            className="w-full px-4 py-2 text-xs font-semibold text-zinc-500 uppercase tracking-wider bg-zinc-950 hover:bg-zinc-900 flex items-center justify-between transition-colors"
+            className="w-full px-4 py-2 text-xs font-semibold text-theme-tertiary uppercase tracking-wider bg-theme-bg hover:bg-theme-surface-hover flex items-center justify-between transition-colors"
           >
             <span>📁 Remote ({remoteBranches.length})</span>
             <span className="text-base">{showRemote ? '▼' : '▶'}</span>
@@ -235,7 +235,7 @@ export function BranchSidebar({ repoPath, onRefresh, onBranchAction }: BranchSid
           {showRemote && (
             <>
               {remoteBranches.length === 0 ? (
-                <div className="px-4 py-3 text-sm text-zinc-600">
+                <div className="px-4 py-3 text-sm text-theme-tertiary">
                   No remote branches found
                 </div>
               ) : (
@@ -244,11 +244,11 @@ export function BranchSidebar({ repoPath, onRefresh, onBranchAction }: BranchSid
                     key={branch.full_name}
                     onClick={() => handleBranchClick(branch)}
                     title={`${branch.commit_message}\n${formatDate(branch.last_commit_date)}`}
-                    className="w-full px-3 py-2 text-left hover:bg-zinc-800 transition-colors border-l-2 border-transparent"
+                    className="w-full px-3 py-2 text-left hover:bg-theme-surface-hover transition-colors border-l-2 border-transparent"
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="text-sm">🌐</span>
-                      <span className="text-xs text-zinc-400 truncate">
+                      <span className="text-xs text-theme-secondary truncate">
                         {branch.name.replace('origin/', '')}
                       </span>
                     </div>
@@ -261,7 +261,7 @@ export function BranchSidebar({ repoPath, onRefresh, onBranchAction }: BranchSid
       </div>
 
       {/* Footer Actions */}
-      <div className="px-3 py-3 border-t border-zinc-800 bg-zinc-950">
+      <div className="px-3 py-3 border-t border-theme-default bg-theme-bg">
         <button
           onClick={() => onBranchAction?.('create')}
           className="w-full px-3 py-2 text-xs bg-graft-600 hover:bg-graft-500 active:bg-graft-700 text-white rounded font-medium transition-colors"
@@ -274,7 +274,7 @@ export function BranchSidebar({ repoPath, onRefresh, onBranchAction }: BranchSid
       {/* Context Menu */}
       {contextMenu && (
         <div
-          className="fixed bg-zinc-800 border border-zinc-700 rounded-lg shadow-2xl py-1 z-50 min-w-[160px]"
+          className="fixed bg-theme-surface border border-theme-default rounded-lg shadow-2xl py-1 z-50 min-w-[160px]"
           style={{
             left: contextMenu.x,
             top: contextMenu.y,
@@ -284,21 +284,21 @@ export function BranchSidebar({ repoPath, onRefresh, onBranchAction }: BranchSid
           {!contextMenu.branch.is_current && (
             <button
               onClick={() => handleBranchClick(contextMenu.branch)}
-              className="w-full px-4 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-700 transition-colors"
+              className="w-full px-4 py-2 text-left text-sm text-theme-primary hover:bg-theme-surface-hover transition-colors"
             >
               ↪️ Switch to branch
             </button>
           )}
           <button
             onClick={() => handleContextAction('rename')}
-            className="w-full px-4 py-2 text-left text-sm text-zinc-200 hover:bg-zinc-700 transition-colors"
+            className="w-full px-4 py-2 text-left text-sm text-theme-primary hover:bg-theme-surface-hover transition-colors"
           >
             ✏️ Rename branch
           </button>
           {!contextMenu.branch.is_current && (
             <button
               onClick={() => handleContextAction('delete')}
-              className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-zinc-700 transition-colors"
+              className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-theme-surface-hover transition-colors"
             >
               🗑️ Delete branch
             </button>
