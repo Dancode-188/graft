@@ -1457,7 +1457,7 @@ function App() {
                   onCommitContextMenu={handleCommitContextMenu}
                 />
               ) : (
-                <div className="flex-1 flex items-center justify-center text-zinc-500">
+                <div className="flex-1 flex items-center justify-center text-theme-tertiary">
                   No commits found in this repository
                 </div>
               )}
