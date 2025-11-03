@@ -30,18 +30,18 @@ export function CommitMessageInput({ value, onChange, onSubmit, disabled }: Comm
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
   const shortcutKey = isMac ? '⌘' : 'Ctrl';
   return (
-    <div className="border border-zinc-800 rounded-lg overflow-hidden">
+    <div className="border border-theme-default rounded-lg overflow-hidden">
       {/* Header */}
-      <div className="px-3 py-2 bg-zinc-900 border-b border-zinc-800 flex items-center justify-between">
-        <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+      <div className="px-3 py-2 bg-theme-surface border-b border-theme-default flex items-center justify-between">
+        <span className="text-xs font-semibold text-theme-secondary uppercase tracking-wider">
           Commit Message
         </span>
-        <div className="flex items-center gap-2 text-xs text-zinc-600">
+        <div className="flex items-center gap-2 text-xs text-theme-tertiary">
           <span>{value.length} characters</span>
           {!disabled && value.trim() && (
             <>
               <span>•</span>
-              <kbd className="px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-400">
+              <kbd className="px-1.5 py-0.5 bg-theme-surface-hover rounded text-theme-secondary">
                 {shortcutKey}+Enter
               </kbd>
             </>
@@ -58,12 +58,12 @@ export function CommitMessageInput({ value, onChange, onSubmit, disabled }: Comm
         onBlur={() => setFocused(false)}
         disabled={disabled}
         placeholder="Enter commit message... (First line is the summary)"
-        className="w-full min-h-24 max-h-48 px-3 py-2 bg-zinc-950 text-zinc-100 text-sm font-mono placeholder-zinc-600 resize-y focus:outline-none focus:ring-2 focus:ring-graft-500 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full min-h-24 max-h-48 px-3 py-2 bg-theme-bg text-theme-primary text-sm font-mono placeholder-theme-tertiary resize-y focus:outline-none focus:ring-2 focus:ring-graft-500 disabled:opacity-50 disabled:cursor-not-allowed"
       />
 
       {/* Validation */}
       {value.trim().length === 0 && focused && (
-        <div className="px-3 py-2 bg-zinc-900 border-t border-zinc-800 text-xs text-zinc-500">
+        <div className="px-3 py-2 bg-theme-surface border-t border-theme-default text-xs text-theme-tertiary">
           ⚠️ Commit message cannot be empty
         </div>
       )}
