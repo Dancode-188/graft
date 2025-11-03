@@ -1,7 +1,7 @@
 {
   "name": "graft",
   "private": true,
-  "version": "0.8.0",
+  "version": "1.0.0",
   "type": "module",
   "description": "A fast, beautiful, keyboard-first Git GUI that doesn't suck",
   "author": "Your Name",
