@@ -161,21 +161,21 @@ export function CommandPalette({
     <>
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+        className="fixed inset-0 bg-theme-overlay backdrop-blur-sm z-50"
         onClick={onClose}
       />
       
       {/* Modal */}
       <div className="fixed inset-0 flex items-start justify-center pt-[20vh] z-50 pointer-events-none">
         <div 
-          className="bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl w-full max-w-2xl 
+          className="bg-theme-surface border border-theme-default rounded-lg shadow-2xl w-full max-w-2xl 
                      pointer-events-auto max-h-[60vh] flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Search Input */}
-          <div className="p-4 border-b border-zinc-800">
+          <div className="p-4 border-b border-theme-default">
             <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-tertiary">
                 🔍
               </div>
               <input
@@ -187,9 +187,9 @@ export function CommandPalette({
                   setSelectedIndex(0); // Reset selection when query changes
                 }}
                 placeholder="Type a command..."
-                className="w-full bg-zinc-800 text-zinc-200 pl-10 pr-4 py-3 rounded-md
-                          placeholder-zinc-500 focus:outline-none focus:ring-2 
-                          focus:ring-indigo-500 border border-zinc-700"
+                className="w-full bg-theme-bg text-theme-primary pl-10 pr-4 py-3 rounded-md
+                          placeholder-theme-tertiary focus:outline-none focus:ring-2 
+                          focus:ring-indigo-500 border border-theme-default"
                 role="combobox"
                 aria-label="Search commands"
                 aria-controls="command-results"
@@ -208,7 +208,7 @@ export function CommandPalette({
             aria-label="Available commands"
           >
             {groupedCommands.length === 0 ? (
-              <div className="p-8 text-center text-zinc-500">
+              <div className="p-8 text-center text-theme-tertiary">
                 No commands found
               </div>
             ) : (
@@ -239,7 +239,7 @@ export function CommandPalette({
           </div>
 
           {/* Footer hint */}
-          <div className="p-3 border-t border-zinc-800 text-xs text-zinc-500 flex items-center justify-between">
+          <div className="p-3 border-t border-theme-default text-xs text-theme-tertiary flex items-center justify-between">
             <div className="flex gap-4">
               <span>↑↓ Navigate</span>
               <span>↵ Select</span>

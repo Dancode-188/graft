@@ -337,10 +337,10 @@ function SearchModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl w-full max-w-2xl max-h-96 flex flex-col">
+    <div className="fixed inset-0 bg-theme-overlay flex items-center justify-center z-50 p-4">
+      <div className="bg-theme-surface border border-theme-default rounded-lg shadow-2xl w-full max-w-2xl max-h-96 flex flex-col">
         {/* Search Input */}
-        <div className="p-4 border-b border-zinc-800">
+        <div className="p-4 border-b border-theme-default">
           <input
             ref={inputRef}
             type="text"
@@ -354,34 +354,34 @@ function SearchModal({
                 handleSelect(results[0]);
               }
             }}
-            className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-graft-500"
+            className="w-full bg-theme-bg border border-theme-default rounded px-3 py-2 text-theme-primary placeholder-theme-tertiary focus:outline-none focus:ring-2 focus:ring-graft-500"
           />
         </div>
 
         {/* Results */}
         <div className="flex-1 overflow-auto">
           {query.trim() === "" ? (
-            <div className="p-8 text-center text-zinc-500 text-sm">
+            <div className="p-8 text-center text-theme-tertiary text-sm">
               Start typing to search commits
             </div>
           ) : results.length === 0 ? (
-            <div className="p-8 text-center text-zinc-500 text-sm">
+            <div className="p-8 text-center text-theme-tertiary text-sm">
               No commits found matching "{query}"
             </div>
           ) : (
-            <div className="divide-y divide-zinc-800">
+            <div className="divide-y divide-theme-default">
               {results.map((commit) => {
                 const message = commit.message.split('\n')[0];
                 return (
                   <button
                     key={commit.hash}
                     onClick={() => handleSelect(commit)}
-                    className="w-full px-4 py-3 text-left hover:bg-zinc-800 transition-colors focus:outline-none focus:bg-zinc-800"
+                    className="w-full px-4 py-3 text-left hover:bg-theme-surface-hover transition-colors focus:outline-none focus:bg-theme-surface-hover"
                   >
-                    <div className="text-sm font-medium text-zinc-100 truncate">
+                    <div className="text-sm font-medium text-theme-primary truncate">
                       {message}
                     </div>
-                    <div className="text-xs text-zinc-400 flex items-center gap-2 mt-1">
+                    <div className="text-xs text-theme-secondary flex items-center gap-2 mt-1">
                       <span>{commit.short_hash}</span>
                       <span>•</span>
                       <span>{commit.author_name}</span>
