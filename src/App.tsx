@@ -1348,17 +1348,17 @@ function App() {
             {/* Center Panel - Commit List */}
             <div className="flex-1 flex flex-col overflow-hidden">
             {/* Header Bar */}
-            <div className="px-6 py-4 border-b border-zinc-800">
+            <div className="px-6 py-4 border-b border-theme-default">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                   <h2 className="text-xl font-semibold">
                     Commit History
-                    <span className="ml-3 text-sm text-zinc-500 font-normal">
+                    <span className="ml-3 text-sm text-theme-tertiary font-normal">
                       {commits.length} commits
                     </span>
                   </h2>
                   {/* Remote Status Bar */}
-                  <span className="text-zinc-600">│</span>
+                  <span className="text-theme-tertiary">│</span>
                   <RemoteStatusBar
                     repoPath={repoInfo.path}
                     currentBranch={repoInfo.current_branch}
@@ -1368,7 +1368,7 @@ function App() {
                   <button
                     onClick={handleFetch}
                     disabled={fetchInProgress}
-                    className="px-3 py-1.5 text-xs bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 disabled:bg-zinc-900 disabled:text-zinc-600 rounded-lg font-medium transition-all duration-200 flex items-center gap-1.5"
+                    className="px-3 py-1.5 text-xs bg-theme-surface hover:bg-theme-surface-hover active:bg-theme-surface-hover disabled:bg-theme-surface disabled:text-theme-tertiary rounded-lg font-medium transition-all duration-200 flex items-center gap-1.5"
                     title="Fetch updates from remote"
                   >
                     {fetchInProgress ? (
@@ -1387,7 +1387,7 @@ function App() {
                   <button
                     onClick={handleOpenPullDialog}
                     disabled={pullInProgress}
-                    className="px-3 py-1.5 text-xs bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 disabled:bg-zinc-900 disabled:text-zinc-600 rounded-lg font-medium transition-all duration-200 flex items-center gap-1.5"
+                    className="px-3 py-1.5 text-xs bg-theme-surface hover:bg-theme-surface-hover active:bg-theme-surface-hover disabled:bg-theme-surface disabled:text-theme-tertiary rounded-lg font-medium transition-all duration-200 flex items-center gap-1.5"
                     title="Pull from remote"
                   >
                     {pullInProgress ? (
@@ -1406,7 +1406,7 @@ function App() {
                   <button
                     onClick={handleOpenPushDialog}
                     disabled={pushInProgress}
-                    className="px-3 py-1.5 text-xs bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 disabled:bg-zinc-900 disabled:text-zinc-600 rounded-lg font-medium transition-all duration-200 flex items-center gap-1.5"
+                    className="px-3 py-1.5 text-xs bg-theme-surface hover:bg-theme-surface-hover active:bg-theme-surface-hover disabled:bg-theme-surface disabled:text-theme-tertiary rounded-lg font-medium transition-all duration-200 flex items-center gap-1.5"
                     title="Push to remote"
                   >
                     {pushInProgress ? (
@@ -1425,21 +1425,21 @@ function App() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setShowLegend(!showLegend)}
-                    className="px-4 py-2 text-sm bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 rounded-lg font-medium transition-all duration-200"
+                    className="px-4 py-2 text-sm bg-theme-surface hover:bg-theme-surface-hover active:bg-theme-surface-hover rounded-lg font-medium transition-all duration-200"
                     title="Show graph legend (? key)"
                   >
                     ⓘ Legend
                   </button>
                   <button
                     onClick={() => setShowStats(!showStats)}
-                    className="px-4 py-2 text-sm bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 rounded-lg font-medium transition-all duration-200"
+                    className="px-4 py-2 text-sm bg-theme-surface hover:bg-theme-surface-hover active:bg-theme-surface-hover rounded-lg font-medium transition-all duration-200"
                     title="Show repository statistics"
                   >
                     📊 Stats
                   </button>
                   <button
                     onClick={handleOpenRepo}
-                    className="px-4 py-2 text-sm bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 rounded-lg font-medium transition-all duration-200"
+                    className="px-4 py-2 text-sm bg-theme-surface hover:bg-theme-surface-hover active:bg-theme-surface-hover rounded-lg font-medium transition-all duration-200"
                   >
                     Open Different Repository
                   </button>

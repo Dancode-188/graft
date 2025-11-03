@@ -111,11 +111,11 @@ export const CommitListWithGraph: React.FC<CommitListWithGraphProps> = ({
   };
 
   return (
-    <div className="flex flex-1 overflow-hidden gap-0 bg-zinc-950 w-full h-full">
+    <div className="flex flex-1 overflow-hidden gap-0 bg-theme-bg w-full h-full">
       {/* Graph - Scrollable SVG */}
       <div
         ref={graphScrollRef}
-        className="overflow-y-auto overflow-x-auto border-r border-zinc-800 bg-zinc-950"
+        className="overflow-y-auto overflow-x-auto border-r border-theme-default bg-theme-bg"
         style={{ flex: '0 0 300px', height: '100%', minHeight: 0 }}
       >
         <CommitGraph
@@ -151,10 +151,10 @@ export const CommitListWithGraph: React.FC<CommitListWithGraphProps> = ({
                     onCommitContextMenu(commit, e.clientX, e.clientY);
                   }
                 }}
-                className={`bg-zinc-900 border rounded-lg p-4 transition-all duration-200 cursor-pointer ${
+                className={`bg-theme-surface border rounded-lg p-4 transition-all duration-200 cursor-pointer ${
                   isSelected
-                    ? 'border-graft-500 bg-zinc-800 ring-2 ring-graft-500/50 shadow-lg shadow-graft-500/20'
-                    : 'border-zinc-800 hover:border-zinc-700'
+                    ? 'border-graft-500 bg-theme-surface-hover ring-2 ring-graft-500/50 shadow-lg shadow-graft-500/20'
+                    : 'border-theme-default hover:border-theme-hover'
                 }`}
               >
                 <div className="flex items-start gap-4">
@@ -168,14 +168,14 @@ export const CommitListWithGraph: React.FC<CommitListWithGraphProps> = ({
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-3 mb-1">
-                      <p className="text-sm font-medium text-zinc-100 truncate">
+                      <p className="text-sm font-medium text-theme-primary truncate">
                         {commitMessage}
                       </p>
-                      <span className="flex-shrink-0 text-xs text-zinc-500 font-mono">
+                      <span className="flex-shrink-0 text-xs text-theme-tertiary font-mono">
                         {commit.short_hash}
                       </span>
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-zinc-500">
+                    <div className="flex items-center gap-3 text-xs text-theme-tertiary">
                       <span>{commit.author_name}</span>
                       <span>•</span>
                       <span>{timeAgo}</span>
