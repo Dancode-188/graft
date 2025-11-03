@@ -77,11 +77,11 @@ export function PushDialog({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-zinc-900 border border-zinc-700 rounded-lg w-[520px] shadow-2xl">
+    <div className="fixed inset-0 bg-theme-overlay flex items-center justify-center z-50">
+      <div className="bg-theme-surface border border-theme-default rounded-lg w-[520px] shadow-2xl">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-zinc-800">
-          <h2 className="text-lg font-semibold text-zinc-100">
+        <div className="px-6 py-4 border-b border-theme-default">
+          <h2 className="text-lg font-semibold text-theme-primary">
             {needsForce ? '⚠️ Force Push Required' : `Push to '${remoteName}/${branchName}'`}
           </h2>
         </div>
@@ -93,18 +93,18 @@ export function PushDialog({
             <>
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-graft-400">✓</span>
-                <span className="text-zinc-300">
+                <span className="text-theme-secondary">
                   {ahead} commit{ahead === 1 ? '' : 's'} ready to push
                 </span>
               </div>
 
               {/* Commit List */}
               {commitsToPush.length > 0 && (
-                <div className="max-h-48 overflow-y-auto space-y-1 bg-zinc-950/50 rounded-lg p-3 border border-zinc-800">
+                <div className="max-h-48 overflow-y-auto space-y-1 bg-theme-bg rounded-lg p-3 border border-theme-default">
                   {commitsToPush.map((commit) => (
                     <div key={commit.hash} className="text-xs">
                       <div className="font-mono text-graft-400">• {commit.message}</div>
-                      <div className="text-zinc-600 ml-3">
+                      <div className="text-theme-tertiary ml-3">
                         {commit.author_name} • {new Date(commit.timestamp * 1000).toLocaleDateString()}
                       </div>
                     </div>
@@ -135,15 +135,15 @@ export function PushDialog({
               {/* Commits to push */}
               {commitsToPush.length > 0 && (
                 <div>
-                  <p className="text-xs text-zinc-500 mb-2">Your local commits:</p>
-                  <div className="max-h-32 overflow-y-auto space-y-1 bg-zinc-950/50 rounded-lg p-3 border border-zinc-800">
+                  <p className="text-xs text-theme-tertiary mb-2">Your local commits:</p>
+                  <div className="max-h-32 overflow-y-auto space-y-1 bg-theme-bg rounded-lg p-3 border border-theme-default">
                     {commitsToPush.slice(0, 5).map((commit) => (
                       <div key={commit.hash} className="text-xs">
-                        <div className="font-mono text-zinc-300">• {commit.message}</div>
+                        <div className="font-mono text-theme-secondary">• {commit.message}</div>
                       </div>
                     ))}
                     {commitsToPush.length > 5 && (
-                      <div className="text-xs text-zinc-600">
+                      <div className="text-xs text-theme-tertiary">
                         ... and {commitsToPush.length - 5} more
                       </div>
                     )}
@@ -162,10 +162,10 @@ export function PushDialog({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-zinc-800 flex items-center justify-end gap-3">
+        <div className="px-6 py-4 border-t border-theme-default flex items-center justify-end gap-3">
           <button
             onClick={onCancel}
-            className="px-4 py-2 text-sm bg-zinc-800 hover:bg-zinc-700 rounded-lg font-medium transition-colors"
+            className="px-4 py-2 text-sm bg-theme-bg hover:bg-theme-surface-hover rounded-lg font-medium transition-colors"
           >
             Cancel
           </button>
@@ -174,7 +174,7 @@ export function PushDialog({
             <button
               onClick={handleNormalPush}
               disabled={ahead === 0}
-              className="px-4 py-2 text-sm bg-graft-500 hover:bg-graft-600 active:bg-graft-700 disabled:bg-zinc-800 disabled:text-zinc-600 rounded-lg font-medium transition-colors"
+              className="px-4 py-2 text-sm bg-graft-500 hover:bg-graft-600 active:bg-graft-700 disabled:bg-theme-bg disabled:text-theme-tertiary rounded-lg font-medium transition-colors"
             >
               Push
             </button>
