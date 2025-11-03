@@ -151,10 +151,10 @@ export function InteractiveRebaseModal({
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-        <div className="bg-zinc-900 rounded-lg p-8 text-center">
+      <div className="fixed inset-0 bg-theme-overlay flex items-center justify-center z-50">
+        <div className="bg-theme-surface rounded-lg p-8 text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-graft-green mx-auto mb-4"></div>
-          <p className="text-zinc-400">Loading commits...</p>
+          <p className="text-theme-tertiary">Loading commits...</p>
         </div>
       </div>
     );
@@ -162,13 +162,13 @@ export function InteractiveRebaseModal({
 
   if (error) {
     return (
-      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-        <div className="bg-zinc-900 rounded-lg p-8 max-w-md">
+      <div className="fixed inset-0 bg-theme-overlay flex items-center justify-center z-50">
+        <div className="bg-theme-surface rounded-lg p-8 max-w-md">
           <h3 className="text-lg font-semibold text-red-400 mb-4">Error</h3>
-          <p className="text-zinc-300 mb-6">{error}</p>
+          <p className="text-theme-secondary mb-6">{error}</p>
           <button
             onClick={onClose}
-            className="w-full px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 rounded-lg transition-colors"
+            className="w-full px-4 py-2 bg-theme-bg hover:bg-theme-surface-hover text-theme-primary rounded-lg transition-colors"
           >
             Close
           </button>
@@ -178,15 +178,15 @@ export function InteractiveRebaseModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-      <div className="bg-zinc-900 rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-theme-overlay flex items-center justify-center z-50 p-4">
+      <div className="bg-theme-surface rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-zinc-800">
+        <div className="flex items-center justify-between p-6 border-b border-theme-default">
           <div>
-            <h2 className="text-xl font-semibold text-zinc-100">
+            <h2 className="text-xl font-semibold text-theme-primary">
               Interactive Rebase
             </h2>
-            <p className="text-sm text-zinc-400 mt-1">
+            <p className="text-sm text-theme-tertiary mt-1">
               Rebasing onto{" "}
               <span className="font-mono text-graft-green">
                 {baseCommit.substring(0, 7)}
@@ -195,7 +195,7 @@ export function InteractiveRebaseModal({
           </div>
           <button
             onClick={onClose}
-            className="text-zinc-400 hover:text-zinc-200 transition-colors"
+            className="text-theme-tertiary hover:text-theme-primary transition-colors"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18" />
@@ -205,11 +205,11 @@ export function InteractiveRebaseModal({
         </div>
 
         {/* Instructions */}
-        <div className="px-6 py-4 bg-zinc-800/50 border-b border-zinc-800">
-          <p className="text-sm text-zinc-300">
+        <div className="px-6 py-4 bg-theme-bg border-b border-theme-default">
+          <p className="text-sm text-theme-secondary">
             📝 Edit commits below, then click <strong>Start Rebase</strong>
           </p>
-          <p className="text-xs text-zinc-500 mt-1">
+          <p className="text-xs text-theme-tertiary mt-1">
             💡 Drag to reorder • Select action for each commit
           </p>
         </div>
@@ -241,7 +241,7 @@ export function InteractiveRebaseModal({
 
         {/* Validation Messages */}
         {validation && (
-          <div className="px-6 py-4 border-t border-zinc-800 space-y-3">
+          <div className="px-6 py-4 border-t border-theme-default space-y-3">
             {/* Errors */}
             {validation.errors.length > 0 && (
               <div className="bg-red-900/20 border border-red-800 rounded-lg p-3">
@@ -273,10 +273,10 @@ export function InteractiveRebaseModal({
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-between gap-3 p-6 border-t border-zinc-800 bg-zinc-900">
+        <div className="flex items-center justify-between gap-3 p-6 border-t border-theme-default bg-theme-surface">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition-all"
+            className="px-4 py-2 text-sm font-medium text-theme-tertiary hover:text-theme-primary hover:bg-theme-surface-hover rounded-lg transition-all"
           >
             Cancel
           </button>
@@ -290,7 +290,7 @@ export function InteractiveRebaseModal({
                 ${
                   canProceed
                     ? "bg-graft-500/10 text-graft-500 border border-graft-500/30 hover:bg-graft-500/20 hover:border-graft-500/50"
-                    : "bg-zinc-800 text-zinc-500 border border-zinc-700 cursor-not-allowed"
+                    : "bg-theme-bg text-theme-tertiary border border-theme-default cursor-not-allowed"
                 }
               `}
             >
@@ -305,7 +305,7 @@ export function InteractiveRebaseModal({
                 ${
                   canProceed
                     ? "bg-graft-500 text-zinc-900 hover:bg-graft-400 shadow-lg shadow-graft-500/20"
-                    : "bg-zinc-800 text-zinc-400 border-2 border-zinc-700 cursor-not-allowed"
+                    : "bg-theme-bg text-theme-tertiary border-2 border-theme-default cursor-not-allowed"
                 }
               `}
             >

@@ -71,8 +71,8 @@ export function RebaseCommitItem({
         style={{ userSelect: 'none' }}
         className={`
           group relative flex items-center gap-3 px-3 py-2.5
-          bg-zinc-800/50 hover:bg-zinc-800 
-          border border-zinc-700 rounded-lg
+          bg-theme-bg hover:bg-theme-surface-hover 
+          border border-theme-default rounded-lg
           transition-all duration-200 select-none
           ${isDragging ? "opacity-40 scale-95 pointer-events-none" : "opacity-100 scale-100"}
           ${isDropTarget ? "ring-2 ring-graft-500" : ""}
@@ -93,7 +93,7 @@ export function RebaseCommitItem({
             e.stopPropagation(); 
             e.preventDefault();
           }}
-          className="flex-shrink-0 text-zinc-500 group-hover:text-zinc-300 transition-colors cursor-grab active:cursor-grabbing select-none"
+          className="flex-shrink-0 text-theme-tertiary group-hover:text-theme-secondary transition-colors cursor-grab active:cursor-grabbing select-none"
           style={{ userSelect: 'none', WebkitUserSelect: 'none', pointerEvents: 'auto' }}
         >
           <svg
@@ -117,9 +117,9 @@ export function RebaseCommitItem({
           onMouseDown={(e) => e.stopPropagation()}
           className={`
             flex-shrink-0 px-2 py-1 text-xs font-medium rounded
-            bg-zinc-900 border border-zinc-700
+            bg-theme-surface border border-theme-default
             ${actionMeta.color}
-            hover:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-graft-500
+            hover:border-theme-default focus:outline-none focus:ring-2 focus:ring-graft-500
             transition-all cursor-pointer
           `}
           style={{ pointerEvents: 'auto' }}
@@ -134,14 +134,14 @@ export function RebaseCommitItem({
         {/* Commit Info */}
         <div className="flex-1 min-w-0" style={{ pointerEvents: 'none' }}>
           <div className="flex items-baseline gap-2">
-            <span className="font-mono text-xs text-zinc-500">
+            <span className="font-mono text-xs text-theme-tertiary">
               {commit.short_hash}
             </span>
-            <span className="text-sm text-zinc-200 truncate">
+            <span className="text-sm text-theme-primary truncate">
               {commit.message}
             </span>
           </div>
-          <div className="text-xs text-zinc-500 mt-0.5">
+          <div className="text-xs text-theme-tertiary mt-0.5">
             {commit.author}
           </div>
         </div>

@@ -20,14 +20,14 @@ export function RebasePreviewModal({
   const resultingCommits = plan.total_commits - drops - (squashes + fixups);
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-      <div className="bg-zinc-900 rounded-lg shadow-2xl w-full max-w-2xl">
+    <div className="fixed inset-0 bg-theme-overlay flex items-center justify-center z-50 p-4">
+      <div className="bg-theme-surface rounded-lg shadow-2xl w-full max-w-2xl">
         {/* Header */}
-        <div className="p-6 border-b border-zinc-800">
-          <h2 className="text-xl font-semibold text-zinc-100">
+        <div className="p-6 border-b border-theme-default">
+          <h2 className="text-xl font-semibold text-theme-primary">
             📋 Rebase Preview
           </h2>
-          <p className="text-sm text-zinc-400 mt-1">
+          <p className="text-sm text-theme-tertiary mt-1">
             Review changes before executing
           </p>
         </div>
@@ -36,13 +36,13 @@ export function RebasePreviewModal({
         <div className="p-6 space-y-6">
           {/* Summary */}
           <div>
-            <h3 className="text-sm font-semibold text-zinc-300 mb-3">
+            <h3 className="text-sm font-semibold text-theme-secondary mb-3">
               This rebase will:
             </h3>
             <div className="space-y-2 text-sm">
               {picks > 0 && (
-                <div className="flex items-center gap-2 text-zinc-300">
-                  <span className="text-zinc-400">✓</span>
+                <div className="flex items-center gap-2 text-theme-secondary">
+                  <span className="text-theme-tertiary">✓</span>
                   Keep {picks} commit{picks !== 1 ? "s" : ""} as-is (pick)
                 </div>
               )}
@@ -76,8 +76,8 @@ export function RebasePreviewModal({
           </div>
 
           {/* Result */}
-          <div className="p-4 bg-zinc-800/50 rounded-lg border border-zinc-700">
-            <p className="text-sm text-zinc-300">
+          <div className="p-4 bg-theme-bg rounded-lg border border-theme-default">
+            <p className="text-sm text-theme-secondary">
               <strong>Result:</strong> {plan.total_commits} commits →{" "}
               {resultingCommits} commits
             </p>
@@ -109,10 +109,10 @@ export function RebasePreviewModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 p-6 border-t border-zinc-800 bg-zinc-900">
+        <div className="flex items-center justify-end gap-3 p-6 border-t border-theme-default bg-theme-surface">
           <button
             onClick={onBack}
-            className="px-4 py-2 text-sm font-medium text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition-all"
+            className="px-4 py-2 text-sm font-medium text-theme-tertiary hover:text-theme-primary hover:bg-theme-surface-hover rounded-lg transition-all"
           >
             Back to Edit
           </button>
