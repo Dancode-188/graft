@@ -306,9 +306,13 @@ graft/
 │   │   └── lib.rs                # Git operations & commands
 │   ├── Cargo.toml                # Rust dependencies
 │   └── tauri.conf.json           # Tauri configuration
-├── ROADMAP.md                    # Development phases
-├── PHASE_9_COMPLETE.md           # Phase 9 completion report
-├── RELEASE_v0.9.0.md             # v0.9.0 release notes
+├── .github/                      # GitHub templates
+│   ├── ISSUE_TEMPLATE/           # Bug & feature templates
+│   └── PULL_REQUEST_TEMPLATE.md  # PR template
+├── ROADMAP.md                    # Development phases & roadmap
+├── CONTRIBUTING.md               # Contribution guidelines
+├── CODE_OF_CONDUCT.md            # Community standards
+├── CHANGELOG.md                  # Version history
 └── package.json                  # Node dependencies
 ```
 
@@ -432,16 +436,29 @@ If you like Graft, give it a ⭐ on GitHub!
 
 ## 📚 Documentation
 
-- [ROADMAP.md](./ROADMAP.md) - Development roadmap
-- [PHASE_9_COMPLETE.md](./PHASE_9_COMPLETE.md) - Phase 9 completion report
-- [RELEASE_v0.9.0.md](./RELEASE_v0.9.0.md) - Latest release notes
-- [CHANGELOG.md](./CHANGELOG.md) - Full changelog
+- [ROADMAP.md](./ROADMAP.md) - Development roadmap and future plans
+- [CONTRIBUTING.md](./CONTRIBUTING.md) - How to contribute to Graft
+- [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) - Community guidelines
+- [CHANGELOG.md](./CHANGELOG.md) - Full version history
+- [GitHub Releases](https://github.com/Dancode-188/graft/releases) - Release notes
 
 ---
 
 ## 🎉 Recent Releases
 
-### v1.0.0 - Production Ready! (November 3, 2025) 🎊 LATEST
+### v1.0.1 - Bug Fixes & Documentation (November 4, 2025) 🎊 LATEST
+
+**Patch Release**: Polish & Documentation
+
+- 🐛 Fixed version display and status bar bugs
+- 📚 Added comprehensive installation guide
+- 🔧 Added troubleshooting section for common issues
+- ✨ Improved Windows SmartScreen instructions
+- 🔑 Added SSH/HTTPS authentication setup guide
+
+[View on GitHub Releases](https://github.com/Dancode-188/graft/releases/tag/v1.0.1)
+
+### v1.0.0 - Production Ready! (November 3, 2025)
 
 **Major Milestone**: The 1.0 Release
 
@@ -451,29 +468,18 @@ If you like Graft, give it a ⭐ on GitHub!
 - 🌓 System theme detection
 - 💎 Zero hardcoded colors
 - ♿ WCAG AA accessibility
-- 🚀 Production-ready quality
 
-[View Full Release Notes](./RELEASE_v1.0.0.md)
+[View on GitHub Releases](https://github.com/Dancode-188/graft/releases/tag/v1.0.0)
 
-### v0.9.0 - Keyboard & Speed (November 2, 2025)
+### Previous Major Releases
 
-**Major Release**: Power User Features
-
-- ⚡ Command Palette (Cmd+K) - 30+ commands
-- 🔍 Quick Search (Cmd+P) - Search everything
-- ⌨️ Keyboard Shortcuts - 20+ global shortcuts
-- 🖱️ Context Menus - Right-click everywhere
-- ✨ Performance - 80% fewer re-renders
-- ♿ Accessibility - Full ARIA support
-
-[View Full Release Notes](./RELEASE_v0.9.0.md)
-
-### Previous Releases
-
+- **v0.9.0** - Keyboard & Speed (Command palette, shortcuts, performance)
 - **v0.8.0** - Stash Management
 - **v0.7.0** - Interactive Rebase
 - **v0.6.0** - Push/Pull/Fetch
 - **v0.5.0** - Branch Operations
+
+**See all releases**: [GitHub Releases](https://github.com/Dancode-188/graft/releases)
 
 ---
 
