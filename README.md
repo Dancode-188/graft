@@ -2,7 +2,7 @@
 
 > A fast, beautiful, keyboard-first Git GUI that doesn't suck.
 
-![Version](https://img.shields.io/badge/version-1.0.1-green)
+![Version](https://img.shields.io/badge/version-1.0.2-green)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Status](https://img.shields.io/badge/status-Production%20Ready-brightgreen)
 
@@ -134,7 +134,7 @@ Existing Git GUIs are either:
 
 ### Download Graft
 
-**Latest Release**: [v1.0.1](https://github.com/Dancode-188/graft/releases/latest)
+**Latest Release**: [v1.0.2](https://github.com/Dancode-188/graft/releases/latest)
 
 #### Windows
 1. Download one of the installers:
@@ -446,7 +446,21 @@ If you like Graft, give it a ⭐ on GitHub!
 
 ## 🎉 Recent Releases
 
-### v1.0.1 - Bug Fixes & Documentation (November 4, 2025) 🎊 LATEST
+### v1.0.2 - Clean & Ready (November 4, 2025) 🎊 LATEST
+
+**Patch Release**: Repository Cleanup & Polish
+
+- 🧹 Cleaned up 65+ internal development files
+- 📚 Added comprehensive contributor documentation
+- 🤝 Added GitHub issue & PR templates
+- 👥 Added CODE_OF_CONDUCT & CONTRIBUTING guides
+- 🐛 Fixed all README links to correct repository
+- 📖 Removed references to deleted documentation files
+- ✨ 10 strategic issues created for contributors
+
+[View on GitHub Releases](https://github.com/Dancode-188/graft/releases/tag/v1.0.2)
+
+### v1.0.1 - Bug Fixes & Documentation (November 4, 2025)
 
 **Patch Release**: Polish & Documentation
 
