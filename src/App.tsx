@@ -1257,7 +1257,7 @@ function App() {
           <h1 className="text-2xl font-bold tracking-tight">
             <span className="text-graft-500">Graft</span>
           </h1>
-          <span className="text-xs text-theme-tertiary font-mono">v1.0.2</span>
+          <span className="text-xs text-theme-tertiary font-mono">v1.0.3</span>
           
           {/* Branch Sidebar Toggle Button (only show when repo is open) */}
           {repoInfo && (
@@ -1716,7 +1716,7 @@ function App() {
       {/* Status Bar */}
       <footer className="px-6 py-2 border-t border-theme-default bg-theme-surface text-xs text-theme-tertiary flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <span>Graft v1.0.2 - Production Ready ✨</span>
+          <span>Graft v1.0.3 - Production Ready ✨</span>
           {commits.length > 0 && (
             <>
               <span className="text-theme-tertiary">│</span>

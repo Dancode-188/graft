@@ -2,7 +2,7 @@
 
 > A fast, beautiful, keyboard-first Git GUI that doesn't suck.
 
-![Version](https://img.shields.io/badge/version-1.0.2-green)
+![Version](https://img.shields.io/badge/version-1.0.3-green)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Status](https://img.shields.io/badge/status-Production%20Ready-brightgreen)
 
@@ -134,7 +134,7 @@ Existing Git GUIs are either:
 
 ### Download Graft
 
-**Latest Release**: [v1.0.2](https://github.com/Dancode-188/graft/releases/latest)
+**Latest Release**: [v1.0.3](https://github.com/Dancode-188/graft/releases/latest)
 
 #### Windows
 1. Download one of the installers:
@@ -446,7 +446,19 @@ If you like Graft, give it a ⭐ on GitHub!
 
 ## 🎉 Recent Releases
 
-### v1.0.2 - Clean & Ready (November 4, 2025) 🎊 LATEST
+### v1.0.3 - Authentication Fix (November 4, 2025) 🎊 LATEST
+
+**Critical Patch**: Fixed Push/Pull Authentication
+
+- 🔐 Fixed HTTPS authentication for push/pull/fetch operations
+- ✅ Added support for Git Credential Manager
+- 🐛 Resolved 401 errors on HTTPS remotes
+- 🔑 Now works with both SSH and HTTPS authentication
+- ⚡ Push functionality fully working
+
+[View on GitHub Releases](https://github.com/Dancode-188/graft/releases/tag/v1.0.3)
+
+### v1.0.2 - Clean & Ready (November 4, 2025)
 
 **Patch Release**: Repository Cleanup & Polish
 
@@ -455,8 +467,6 @@ If you like Graft, give it a ⭐ on GitHub!
 - 🤝 Added GitHub issue & PR templates
 - 👥 Added CODE_OF_CONDUCT & CONTRIBUTING guides
 - 🐛 Fixed all README links to correct repository
-- 📖 Removed references to deleted documentation files
-- ✨ 10 strategic issues created for contributors
 
 [View on GitHub Releases](https://github.com/Dancode-188/graft/releases/tag/v1.0.2)
 
