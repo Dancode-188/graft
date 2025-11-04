@@ -472,21 +472,15 @@ If you like Graft, give it a ⭐ on GitHub!
 
 [View on GitHub Releases](https://github.com/Dancode-188/graft/releases/tag/v1.0.1)
 
-### v1.0.0 - Production Ready! (November 3, 2025)
+### Previous Major Features
 
-**Major Milestone**: The 1.0 Release
+**v1.0.0 (November 3, 2025)** - Production Ready!
+- Complete theme system (dark & light)
+- 100% theme coverage across all components
+- Instant theme switching
+- WCAG AA accessibility
 
-- 🎨 Complete theme system (dark & light)
-- ✨ 100% theme coverage (34 components)
-- ⚡ Instant theme switching (<100ms)
-- 🌓 System theme detection
-- 💎 Zero hardcoded colors
-- ♿ WCAG AA accessibility
-
-[View on GitHub Releases](https://github.com/Dancode-188/graft/releases/tag/v1.0.0)
-
-### Previous Major Releases
-
+**Earlier Releases:**
 - **v0.9.0** - Keyboard & Speed (Command palette, shortcuts, performance)
 - **v0.8.0** - Stash Management
 - **v0.7.0** - Interactive Rebase
