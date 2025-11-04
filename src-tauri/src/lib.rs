@@ -1243,9 +1243,27 @@ fn fetch_from_remote(path: String, remote_name: String) -> Result<FetchResult, S
         true
     });
 
-    // Credentials callback - try SSH agent
-    callbacks.credentials(|_url, username_from_url, _allowed_types| {
-        git2::Cred::ssh_key_from_agent(username_from_url.unwrap_or("git"))
+    // Credentials callback - handle both SSH and HTTPS
+    callbacks.credentials(|url, username_from_url, allowed_types| {
+        use git2::CredentialType;
+        
+        // Try SSH key for SSH URLs
+        if allowed_types.contains(CredentialType::SSH_KEY) {
+            return git2::Cred::ssh_key_from_agent(username_from_url.unwrap_or("git"));
+        }
+        
+        // Try credential helper for HTTPS URLs (uses Git Credential Manager)
+        if allowed_types.contains(CredentialType::USER_PASS_PLAINTEXT) {
+            // Try Git's credential helper which will use Windows Credential Manager
+            if let Ok(config) = git2::Config::open_default() {
+                if let Ok(cred) = git2::Cred::credential_helper(&config, url, username_from_url) {
+                    return Ok(cred);
+                }
+            }
+        }
+        
+        // Fallback error
+        Err(git2::Error::from_str("No suitable authentication method found. Please ensure Git Credential Manager is set up."))
     });
 
     // Set up fetch options
@@ -1590,9 +1608,27 @@ fn push_to_remote(
     // Set up callbacks
     let mut callbacks = RemoteCallbacks::new();
     
-    // Credentials callback - try SSH agent
-    callbacks.credentials(|_url, username_from_url, _allowed_types| {
-        git2::Cred::ssh_key_from_agent(username_from_url.unwrap_or("git"))
+    // Credentials callback - handle both SSH and HTTPS
+    callbacks.credentials(|url, username_from_url, allowed_types| {
+        use git2::CredentialType;
+        
+        // Try SSH key for SSH URLs
+        if allowed_types.contains(CredentialType::SSH_KEY) {
+            return git2::Cred::ssh_key_from_agent(username_from_url.unwrap_or("git"));
+        }
+        
+        // Try credential helper for HTTPS URLs (uses Git Credential Manager)
+        if allowed_types.contains(CredentialType::USER_PASS_PLAINTEXT) {
+            // Try Git's credential helper which will use Windows Credential Manager
+            if let Ok(config) = git2::Config::open_default() {
+                if let Ok(cred) = git2::Cred::credential_helper(&config, url, username_from_url) {
+                    return Ok(cred);
+                }
+            }
+        }
+        
+        // Fallback error
+        Err(git2::Error::from_str("No suitable authentication method found. Please ensure Git Credential Manager is set up."))
     });
 
     // Push update callback to detect rejections
