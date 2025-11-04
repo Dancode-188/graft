@@ -2,7 +2,7 @@
 
 > A fast, beautiful, keyboard-first Git GUI that doesn't suck.
 
-![Version](https://img.shields.io/badge/version-1.0.0-green)
+![Version](https://img.shields.io/badge/version-1.0.1-green)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Status](https://img.shields.io/badge/status-Production%20Ready-brightgreen)
 
@@ -134,7 +134,7 @@ Existing Git GUIs are either:
 
 ### Download Graft
 
-**Latest Release**: [v1.0.1](https://github.com/yourusername/graft/releases/latest)
+**Latest Release**: [v1.0.1](https://github.com/Dancode-188/graft/releases/latest)
 
 #### Windows
 1. Download one of the installers:
@@ -232,7 +232,7 @@ sudo pacman -S webkit2gtk \
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/yourusername/graft.git
+git clone https://github.com/Dancode-188/graft.git
 cd graft
 ```
 
@@ -394,7 +394,7 @@ Graft is in active development! We welcome contributions.
 
 ## 🐛 Known Issues
 
-Check [GitHub Issues](https://github.com/yourusername/graft/issues) for current bugs and feature requests.
+Check [GitHub Issues](https://github.com/Dancode-188/graft/issues) for current bugs and feature requests.
 
 ---
 
@@ -574,8 +574,8 @@ After configuring credentials once, Graft will use your system's Git configurati
 
 ### Need More Help?
 
-- 🐛 **Report bugs**: [GitHub Issues](https://github.com/yourusername/graft/issues)
-- 💬 **Get help**: [GitHub Discussions](https://github.com/yourusername/graft/discussions)
+- 🐛 **Report bugs**: [GitHub Issues](https://github.com/Dancode-188/graft/issues)
+- 💬 **Get help**: [GitHub Discussions](https://github.com/Dancode-188/graft/discussions)
 - 📖 **Documentation**: [Full docs](./README.md)
 
 ---
