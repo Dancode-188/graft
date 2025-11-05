@@ -296,7 +296,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **Note:** Dates follow YYYY-MM-DD format. Version numbers follow [Semantic Versioning](https://semver.org/).
 
-[0.3.0]: https://github.com/yourusername/graft/releases/tag/v0.3.0
-[0.2.0]: https://github.com/yourusername/graft/releases/tag/v0.2.0
-[0.1.0]: https://github.com/yourusername/graft/releases/tag/v0.1.0
-[0.0.1]: https://github.com/yourusername/graft/releases/tag/v0.0.1
+[0.3.0]: https://github.com/graft-project/graft/releases/tag/v0.3.0
+[0.2.0]: https://github.com/graft-project/graft/releases/tag/v0.2.0
+[0.1.0]: https://github.com/graft-project/graft/releases/tag/v0.1.0
+[0.0.1]: https://github.com/graft-project/graft/releases/tag/v0.0.1
