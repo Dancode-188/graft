@@ -1,4 +1,4 @@
-# 🌿 Graft
+﻿# 🌿 Graft
 
 > A fast, beautiful, keyboard-first Git GUI that doesn't suck.
 
