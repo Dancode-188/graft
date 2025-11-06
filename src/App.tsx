@@ -683,11 +683,17 @@ function App() {
         setRepoInfo(info);
 
         // Fetch commits from the repository
+        console.time('⏱️ get_commits backend call');
         const commitList = await invoke<Commit[]>("get_commits", {
           path: selected,
           limit: 10000, // Support large repos (10x increase)
         });
+        console.timeEnd('⏱️ get_commits backend call');
+        
+        console.time('⏱️ setCommits (React state update)');
         setCommits(commitList);
+        console.timeEnd('⏱️ setCommits (React state update)');
+        console.log(`📊 Loaded ${commitList.length} commits`);
 
         // Load branches and stashes
         await loadBranches(selected);

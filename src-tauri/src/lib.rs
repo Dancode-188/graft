@@ -265,6 +265,9 @@ fn open_repository(path: String) -> Result<RepoInfo, String> {
 
 #[tauri::command]
 fn get_commits(path: String, limit: Option<usize>) -> Result<Vec<Commit>, String> {
+    use std::time::Instant;
+    let total_start = Instant::now();
+    
     // Open the repository
     let repo = Repository::open(&path)
         .map_err(|e| format!("Failed to open repository: {}", e))?;
@@ -276,6 +279,7 @@ fn get_commits(path: String, limit: Option<usize>) -> Result<Vec<Commit>, String
 
     // Build a map of commit OIDs to branch references
     // OPTIMIZATION: Collect branch OIDs for revwalk at the same time
+    let branch_start = Instant::now();
     let mut oid_to_branches: std::collections::HashMap<git2::Oid, Vec<BranchRef>> = std::collections::HashMap::new();
     let mut branch_oids: Vec<git2::Oid> = Vec::new();
 
@@ -313,8 +317,10 @@ fn get_commits(path: String, limit: Option<usize>) -> Result<Vec<Commit>, String
             branch_oids.push(oid);
         }
     }
+    println!("⏱️  Branches: {:?}", branch_start.elapsed());
 
     // Build a map of commit OIDs to tag references
+    let tag_start = Instant::now();
     let mut oid_to_tags: std::collections::HashMap<git2::Oid, Vec<TagRef>> = std::collections::HashMap::new();
 
     // Iterate through all tags
@@ -338,8 +344,10 @@ fn get_commits(path: String, limit: Option<usize>) -> Result<Vec<Commit>, String
             }
         }
     }
+    println!("⏱️  Tags: {:?}", tag_start.elapsed());
 
     // Get the HEAD reference
+    let revwalk_start = Instant::now();
     let head = repo.head()
         .map_err(|e| format!("Failed to get HEAD: {}", e))?;
 
@@ -369,8 +377,10 @@ fn get_commits(path: String, limit: Option<usize>) -> Result<Vec<Commit>, String
         revwalk.push(head_commit.id())
             .map_err(|e| format!("Failed to push HEAD: {}", e))?;
     }
+    println!("⏱️  Revwalk setup: {:?}", revwalk_start.elapsed());
 
     // Collect commits
+    let commit_loop_start = Instant::now();
     let mut commits = Vec::new();
     let max_commits = limit.unwrap_or(100); // Default to 100 commits
 
@@ -424,6 +434,8 @@ fn get_commits(path: String, limit: Option<usize>) -> Result<Vec<Commit>, String
             tags,
         });
     }
+    println!("⏱️  Commit loop ({}): {:?}", commits.len(), commit_loop_start.elapsed());
+    println!("⏱️  TOTAL get_commits: {:?}", total_start.elapsed());
 
     Ok(commits)
 }
