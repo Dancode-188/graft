@@ -1,7 +1,7 @@
 // Quick Search - Fast search across everything (Cmd+P)
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { SearchResult } from './types';
-import { searchAll } from './searchEngine';
+import { searchAll, searchGithubOnline } from './searchEngine';
 import { SearchResultItem } from './SearchResultItem';
 import { useDebounce } from '../../hooks/useDebounce';
 
@@ -44,14 +44,27 @@ export function QuickSearch({
   }, [isOpen]);
 
   // Perform search (memoized for performance)
+  const [githubResults, setGithubResults] = useState<SearchResult[]>([]);
   const results = useMemo(() => {
     return searchAll(debouncedQuery, { commits, branches, stashes });
   }, [debouncedQuery, commits, branches, stashes]);
+
+  useEffect(() => {
+    let active = true;
+    if (debouncedQuery.trim()) {
+      searchGithubOnline(debouncedQuery).then(res => {
+        if (active) setGithubResults(res);
+      });
+    } else {
+      setGithubResults([]);
+    }
+    return () => { active = false; };
+  }, [debouncedQuery]);
   
   // Limit results for performance (top 50)
   const limitedResults = useMemo(() => {
-    return results.slice(0, 50);
-  }, [results]);
+    return [...githubResults, ...results].slice(0, 50);
+  }, [githubResults, results]);
 
   // Handle result selection (memoized callback)
   const handleSelectResult = useCallback((result: SearchResult) => {
