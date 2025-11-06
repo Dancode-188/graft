@@ -2,7 +2,7 @@
 
 > A fast, beautiful, keyboard-first Git GUI that doesn't suck.
 
-![Version](https://img.shields.io/badge/version-1.0.4-beta.1-green)
+![Version](https://img.shields.io/badge/version--1.0.4--beta.1-green)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Status](https://img.shields.io/badge/status-Production%20Ready-brightgreen)
 
