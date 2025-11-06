@@ -1,6 +1,6 @@
 // Quick Search Types
 
-export type SearchResultType = 'commit' | 'branch' | 'stash' | 'file';
+export type SearchResultType = 'commit' | 'branch' | 'stash' | 'file' | 'github';
 
 export interface SearchResult {
   type: SearchResultType;
