@@ -25,6 +25,22 @@ Existing Git GUIs are either:
 
 ---
 
+## 📸 Screenshots
+
+### Main Interface
+![Graft Main UI](screenshots/main-ui.png)
+*Beautiful commit history with visual graph, commit details, and clean dark theme*
+
+### Command Palette
+![Command Palette](screenshots/command-palette.png)
+*Access 30+ Git operations instantly with Ctrl+K*
+
+### Interactive Rebase
+![Interactive Rebase](screenshots/interactive-rebase.png)
+*Drag-and-drop commit reordering with visual feedback*
+
+---
+
 ## ✨ Features
 
 ### 🎨 Core Features (Phases 0-8)
