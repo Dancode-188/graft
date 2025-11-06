@@ -1,0 +1,13 @@
+version: 2
+updates:
+  # NPM dependencies
+  - package-ecosystem: "npm"
+    directory: "/" # Location of package.json
+    schedule:
+      interval: "daily"
+
+  # Rust (Cargo) dependencies
+  - package-ecosystem: "cargo"
+    directory: "/" # Location of Cargo.toml
+    schedule:
+      interval: "daily"
