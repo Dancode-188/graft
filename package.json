@@ -1,7 +1,7 @@
 {
   "name": "graft",
   "private": true,
-  "version": "1.0.3",
+  "version": "1.0.4-beta.1",
   "type": "module",
   "description": "A fast, beautiful, keyboard-first Git GUI that doesn't suck",
   "author": "Your Name",
@@ -16,22 +16,23 @@
     "tauri:build": "tauri build"
   },
   "dependencies": {
-  "@monaco-editor/react": "^4.7.0",
-  "monaco-editor": "^0.45.0",
+    "@monaco-editor/react": "^4.7.0",
     "@tauri-apps/api": "^2.9.0",
     "@tauri-apps/plugin-dialog": "^2.4.2",
     "@tauri-apps/plugin-fs": "^2",
     "@tauri-apps/plugin-opener": "^2",
-  "react": "^18.2.0",
-  "react-dom": "^18.2.0"
+    "monaco-editor": "^0.45.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
     "@testing-library/jest-dom": "^6.0.1",
     "@testing-library/react": "^14.0.0",
     "@testing-library/user-event": "^14.4.3",
-  "@types/react": "^18.2.44",
-  "@types/react-dom": "^18.2.17",
+    "@types/node": "^24.10.0",
+    "@types/react": "^18.2.44",
+    "@types/react-dom": "^18.2.17",
     "@vitejs/plugin-react": "^5.1.0",
     "autoprefixer": "^10.4.20",
     "jsdom": "^22.1.0",
