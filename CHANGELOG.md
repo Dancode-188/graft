@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.4-beta.1] - 2025-11-06
+
+### 🎉 Major Features
+- **Authentication Fix**: HTTPS authentication for push/pull/fetch operations now works reliably
+- **Git Credential Manager Support**: Added support for system credential manager
+- **401 Error Resolution**: Fixed 401 errors on HTTPS remotes
+- **SSH & HTTPS**: Both authentication methods now supported
+- **Push Functionality**: Push now works with all supported authentication
+
+### ✨ Improvements
+- **Versioning**: Updated all version references to `1.0.4-beta.1` across the app, config, and documentation
+- **README Badge**: Updated version badge to use a compatible format for shields.io
+- **GUI Version Display**: GUI now shows the correct prerelease version
+- **Changelog**: This entry added for transparency and tracking
+
+### 🐛 Bug Fixes
+- Fixed issues with version badge not displaying due to shields.io limitations
+- Fixed Tauri config parsing error by using valid semver
+
+---
+
 ## [0.4.0] - 2025-10-30 - Phase 5: Branching ✅
 
 ### 🎉 Major Features
