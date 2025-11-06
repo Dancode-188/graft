@@ -1,3 +1,34 @@
+import { searchGithubRepos, fetchAllPublicRepos } from '../../utils/githubSearch';
+import { fetchUserRepos } from '../../utils/githubSearch';
+/**
+ * Search GitHub repositories online
+ */
+export async function searchGithubOnline(query: string): Promise<SearchResult[]> {
+  try {
+    let repos;
+    const trimmed = query.trim();
+    if (!trimmed) {
+      // No query: show all public repos
+      repos = await fetchAllPublicRepos();
+    } else if (/^[a-zA-Z0-9-]{1,39}$/.test(trimmed)) {
+      // Looks like a GitHub username: fetch user repos
+      repos = await fetchUserRepos(trimmed);
+    } else {
+      repos = await searchGithubRepos(trimmed);
+    }
+    return repos.map((repo: any) => ({
+      type: 'github',
+      id: repo.id,
+      title: repo.full_name || repo.name,
+      subtitle: repo.description || '',
+      icon: '🌐',
+      score: 1000,
+      data: repo,
+    }));
+  } catch (err) {
+    return [];
+  }
+}
 // Quick Search Engine - Unified search across all data types
 import { SearchResult } from './types';
 
