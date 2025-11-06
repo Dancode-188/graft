@@ -4,6 +4,13 @@
 
 ---
 
+## 📦 Release History
+
+- **v1.0.4-beta.1** (Current Beta) — Authentication fixes, prerelease improvements, new versioning ([GitHub Release](https://github.com/KernFerm/graft/releases/tag/v1.0.4-beta.1))
+- **v1.0.3** — Previous stable release ([GitHub Release](https://github.com/Dancode-188/graft/releases/tag/v1.0.3))
+
+---
+
 ## 🚀 Development Story
 
 **Timeline**: October 25 - November 3, 2025 (9 days)  
