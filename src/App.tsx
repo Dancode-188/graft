@@ -685,7 +685,7 @@ function App() {
         // Fetch commits from the repository
         const commitList = await invoke<Commit[]>("get_commits", {
           path: selected,
-          limit: 1000, // Increased limit for virtual scrolling
+          limit: 10000, // Support large repos (10x increase)
         });
         setCommits(commitList);
 
@@ -728,7 +728,7 @@ function App() {
       try {
         const commitList = await invoke<Commit[]>("get_commits", {
           path: repoInfo.path,
-          limit: 1000,
+          limit: 10000,
         });
         setCommits(commitList);
         setSelectedCommitIndex(-1); // Deselect after refresh
@@ -751,7 +751,7 @@ function App() {
         // Refresh commit list
         const commitList = await invoke<Commit[]>("get_commits", {
           path: repoInfo.path,
-          limit: 1000,
+          limit: 10000,
         });
         setCommits(commitList);
         setSelectedCommitIndex(-1);
