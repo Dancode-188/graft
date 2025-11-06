@@ -26,6 +26,7 @@ import { StashPanel } from "./components/stash";
 import { CommandPalette, createCommands, type CommandActions } from "./components/command-palette";
 import { KeyboardShortcuts } from "./components/keyboard";
 import { QuickSearch } from "./components/quick-search";
+// Remove stray state declaration outside App
 import { StashEntry } from "./components/stash/types";
 import { ThemeToggle } from "./components/ThemeToggle";
 
@@ -124,10 +125,10 @@ function CommitDetailsPanel({
         path: repoPath,
         commitHash: commit.hash,
       })
-        .then((files) => {
+        .then((files: FileChange[]) => {
           setFiles(files);
         })
-        .catch((err) => {
+  .catch((err: Error) => {
           setFileError(err instanceof Error ? err.message : String(err));
         })
         .finally(() => {
@@ -398,6 +399,8 @@ function SearchModal({
 }
 
 function App() {
+  // Add state to control QuickSearch for GitHub
+  const [isGithubSearchOpen, setIsGithubSearchOpen] = useState(false);
   const [repoInfo, setRepoInfo] = useState<RepoInfo | null>(null);
   const [commits, setCommits] = useState<Commit[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -1257,7 +1260,7 @@ function App() {
           <h1 className="text-2xl font-bold tracking-tight">
             <span className="text-graft-500">Graft</span>
           </h1>
-          <span className="text-xs text-theme-tertiary font-mono">v1.0.3</span>
+          <span className="text-xs text-theme-tertiary font-mono">v1.0.4-beta.1</span>
           
           {/* Branch Sidebar Toggle Button (only show when repo is open) */}
           {repoInfo && (
@@ -1716,7 +1719,7 @@ function App() {
       {/* Status Bar */}
       <footer className="px-6 py-2 border-t border-theme-default bg-theme-surface text-xs text-theme-tertiary flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <span>Graft v1.0.3 - Production Ready ✨</span>
+          <span>Graft v1.0.4-beta.1 - Production Ready ✨</span>
           {commits.length > 0 && (
             <>
               <span className="text-theme-tertiary">│</span>
@@ -1837,6 +1840,25 @@ function App() {
 
       {/* Theme Toggle - Debug/Testing Component */}
       <ThemeToggle />
+
+      {/* GitHub Search Button and Dialog */}
+      <button
+        className="fixed top-4 right-4 z-50 bg-indigo-600 text-white px-4 py-2 rounded shadow hover:bg-indigo-700"
+        onClick={() => setIsGithubSearchOpen(true)}
+      >
+        Search GitHub Repos
+      </button>
+
+      <QuickSearch
+        isOpen={isGithubSearchOpen}
+        onClose={() => setIsGithubSearchOpen(false)}
+        commits={[]}
+        branches={[]}
+        stashes={[]}
+        onSelectCommit={() => {}}
+        onSelectBranch={() => {}}
+        onSelectStash={() => {}}
+      />
     </div>
   );
 }
