@@ -110,6 +110,35 @@ Graft is a modern Git GUI built with **native performance** (Tauri + Rust), **be
 | `Cmd/Ctrl+P` | Quick search (commits, branches, stashes) |
 | `Cmd/Ctrl+O` | Open repository |
 | `Cmd/Ctrl+/` | Show keyboard shortcuts |
+
+---
+
+
+### Accessibility
+Accessibility features (screen reader support, keyboard navigation, focus indicators, high contrast) are always enabled.
+
+#### Enabling Windows Narrator (Screen Reader)
+
+You can enable the built-in Windows Narrator screen reader at any time:
+
+- **From the Command Palette:**
+  - Open the Command Palette (`Cmd/Ctrl+K`)
+  - Type "Enable Windows Narrator" and select the command
+  - Follow the instructions in the alert
+- **Or use the keyboard shortcut:**
+  - Press **Ctrl + Windows + Enter**
+
+This will start the Windows Narrator, which will announce controls and navigation in the app.
+
+| Key/Command      | Action/Behavior                                              |
+|------------------|-------------------------------------------------------------|
+| Tab / Shift+Tab  | Move focus forward/backward between interactive elements    |
+| Enter / Space    | Activate the focused button, toggle, or select an option    |
+| Arrow Keys       | Navigate within dropdowns, lists, or menus                  |
+| Escape           | Close modals or dialogs                                     |
+| Screen Reader    | Announces ARIA labels, roles, and states for all controls   |
+
+No special shortcut is needed—accessibility is built in by default for all users.
 | `Escape` | Close modals |
 
 ### Navigation
