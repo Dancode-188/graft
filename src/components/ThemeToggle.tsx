@@ -1,12 +1,18 @@
+import { useState } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
+import { ThemePreview } from './ThemePreview';
 
 export function ThemeToggle() {
   const { theme, themeMode, toggleTheme, setThemeMode } = useTheme();
-  
+  const [previewMode, setPreviewMode] = useState<string | null>(null);
+
+  // Only preview dark/light, not auto
+  const showPreview = previewMode === 'dark' || previewMode === 'light';
+
   return (
     <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 bg-theme-surface border border-theme-default rounded-lg px-3 py-2 shadow-lg">
       <span className="text-xs text-theme-tertiary">Theme:</span>
-      
+
       {/* Quick toggle button */}
       <button
         onClick={toggleTheme}
@@ -23,18 +29,44 @@ export function ThemeToggle() {
           </svg>
         )}
       </button>
-      
-      {/* Mode selector */}
-      <select
-        value={themeMode}
-        onChange={(e) => setThemeMode(e.target.value as any)}
-        className="text-xs bg-theme-bg border border-theme-default rounded px-2 py-1 text-theme-secondary focus:outline-none focus:ring-1 focus:ring-emerald-500"
-      >
-        <option value="dark">Dark</option>
-        <option value="light">Light</option>
-        <option value="auto">Auto</option>
-      </select>
-      
+
+      {/* Mode selector with preview on hover */}
+      <div className="relative">
+        <select
+          value={themeMode}
+          onChange={(e) => setThemeMode(e.target.value as any)}
+          className="text-xs bg-theme-bg border border-theme-default rounded px-2 py-1 text-theme-secondary focus:outline-none focus:ring-1 focus:ring-emerald-500"
+          onMouseLeave={() => setPreviewMode(null)}
+        >
+          <option
+            value="dark"
+            onMouseEnter={() => setPreviewMode('dark')}
+            onMouseLeave={() => setPreviewMode(null)}
+          >
+            Dark
+          </option>
+          <option
+            value="light"
+            onMouseEnter={() => setPreviewMode('light')}
+            onMouseLeave={() => setPreviewMode(null)}
+          >
+            Light
+          </option>
+          <option
+            value="auto"
+            onMouseEnter={() => setPreviewMode(null)}
+          >
+            Auto
+          </option>
+        </select>
+        {/* Preview tooltip */}
+        {showPreview && (
+          <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-50" style={{ pointerEvents: 'none' }}>
+            <ThemePreview mode={previewMode as 'dark' | 'light'} />
+          </div>
+        )}
+      </div>
+
       <span className="text-xs text-theme-tertiary">
         ({theme.name})
       </span>
