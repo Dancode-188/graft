@@ -264,11 +264,7 @@ fn open_repository(path: String) -> Result<RepoInfo, String> {
 }
 
 #[tauri::command]
-#[tauri::command]
 fn get_commits(path: String, offset: Option<usize>, limit: Option<usize>) -> Result<Vec<Commit>, String> {
-    use std::time::Instant;
-    let total_start = Instant::now();
-    
     // Open the repository
     let repo = Repository::open(&path)
         .map_err(|e| format!("Failed to open repository: {}", e))?;
