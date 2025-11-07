@@ -11,6 +11,14 @@
 - [![Download EXE (KernFerm)](https://img.shields.io/badge/download-graft.exe-blue?logo=windows)](https://github.com/KernFerm/graft/releases/tag/Graft-Application-EXE)
 - [![Downloads](https://img.shields.io/github/downloads/KernFerm/graft/Graft-Application-EXE/total?label=Downloads)](https://github.com/KernFerm/graft/releases/tag/Graft-Application-EXE)
 
+- ![Version](https://img.shields.io/badge/version-1.0.5-green)
+- ![License](https://img.shields.io/badge/license-MIT-blue)
+- ![Status](https://img.shields.io/badge/status-Production%20Ready-brightgreen)
+- ![Platforms](https://img.shields.io/badge/platforms-windows%20%7C%20macos%20%7C%20linux-blueviolet)
+- ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
+- [![Download EXE (KernFerm)](https://img.shields.io/badge/download-graft.exe-blue?logo=windows)](https://github.com/KernFerm/graft/releases/download/Graft-Application-EXE/graft.exe)
+
+
 ---
 
 ## 🎯 Vision
