@@ -51,9 +51,6 @@ Graft is a modern Git GUI built with **native performance** (Tauri + Rust), **be
 ![Interactive Rebase GIF](screenshots/interactive-rebase-demo.gif)
 *See drag-and-drop rebase in action!*
 
-### Full Demo Video
-[![Watch on YouTube](https://img.shields.io/badge/Watch%20Demo%20Video-YouTube-red?logo=youtube)](https://www.youtube.com/watch?v=YOUR_DEMO_VIDEO_LINK)
-
 > **Want to contribute?**
 > - Record a short GIF (under 10MB) showing a feature or workflow and add it to the `screenshots/` folder.
 > - Or upload a demo video to YouTube and submit a PR with the link!
