@@ -1,7 +1,13 @@
 import { render, screen, fireEvent, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { StagingArea } from '../StagingArea';
 import * as tauriCore from '@tauri-apps/api/core';
+
+// Mock the invoke function at module level
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: vi.fn(),
+}));
 
 // Mock global confirm and clipboard if used
 const originalConfirm = global.confirm;
@@ -22,7 +28,6 @@ afterAll(() => {
 });
 
 describe('StagingArea component', () => {
-  let invokeMock: any;
   // Maintain an in-test status state that invoke will read/modify
   let statusState: any;
 
@@ -37,7 +42,8 @@ describe('StagingArea component', () => {
       ],
     };
 
-    invokeMock = vi.spyOn(tauriCore, 'invoke').mockImplementation(async (cmd: string, args: any) => {
+    // Get the mocked invoke function and set up its implementation
+    vi.mocked(tauriCore.invoke).mockImplementation(async (cmd: string, args: any) => {
       if (cmd === 'get_working_directory_status') {
         // Return a deep copy to avoid test mutation issues
         return JSON.parse(JSON.stringify(statusState));
@@ -82,7 +88,6 @@ describe('StagingArea component', () => {
   });
 
   afterEach(() => {
-    invokeMock?.mockRestore();
     vi.clearAllMocks();
   });
 
@@ -137,12 +142,13 @@ describe('StagingArea component', () => {
   });
 
   test('space key toggles stage/unstage when focused', async () => {
+    const user = userEvent.setup();
     render(<StagingArea repoPath="/tmp/repo" onCommitCreated={() => {}} />);
 
     const file1Btn = (await screen.findByText('src/file1.txt')).closest('button')!;
     file1Btn.focus();
     // press Space
-    fireEvent.keyDown(file1Btn, { key: ' ' });
+    await user.keyboard(' ');
 
     // Should stage
     expect(await screen.findByText(/Staged Changes \(2\)/)).toBeTruthy();
@@ -150,7 +156,7 @@ describe('StagingArea component', () => {
     // Now find a staged file and press Space to unstage
     const stagedFileBtn = (await screen.findByText('src/old-file.js')).closest('button')!;
     stagedFileBtn.focus();
-    fireEvent.keyDown(stagedFileBtn, { key: ' ' });
+    await user.keyboard(' ');
 
     expect(await screen.findByText(/Staged Changes \(1\)/)).toBeTruthy();
   });
