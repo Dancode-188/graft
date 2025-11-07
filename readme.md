@@ -191,24 +191,19 @@ No special shortcut is needed—accessibility is built in by default for all use
 
 ---
 
-## 📥 Installation
-
-### Download Graft
-
-**Latest Release**: [v1.0.5](https://github.com/kernferm/graft)
-
 #### Windows
-1. Download one of the installers:
-   - **Recommended**: `Graft_1.0.1_x64-setup.exe` (NSIS installer)
-   - **Alternative**: `Graft_1.0.1_x64_en-US.msi` (MSI installer)
+**Note:** There is no installer for Graft. Instead, download the `graft.exe` file from the releases page.
 
-2. Run the installer
-
+1. Download `graft.exe` from the [latest release](https://github.com/kernferm/graft).
+2. Double-click `graft.exe` to run the application.
 3. **Windows SmartScreen Warning** ⚠️
    
-   You may see a "Windows protected your PC" warning. This is normal for open-source applications that don't have a paid code-signing certificate ($300-500/year).
+  When you run `graft.exe`, Windows may display a blue "Windows protected your PC" warning. This is normal for open-source applications without a paid code-signing certificate.
    
-   **Graft is completely safe** - the code is open source and auditable.
+  - Click **More info**
+  - Click **Run anyway** to continue
+   
+  **Graft is completely safe** – the code is open source and auditable.
 
 ## 📁 Project Structure
 
