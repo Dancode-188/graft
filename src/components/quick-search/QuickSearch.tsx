@@ -1,5 +1,5 @@
 // Quick Search - Fast search across everything (Cmd+P)
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { SearchResult } from './types';
 import { searchAll, searchGithubOnline } from './searchEngine';
 import { SearchResultItem } from './SearchResultItem';
@@ -43,28 +43,28 @@ export function QuickSearch({
     }
   }, [isOpen]);
 
-  // Perform search (memoized for performance)
+  // Perform search (async for commit search via Web Worker)
   const [githubResults, setGithubResults] = useState<SearchResult[]>([]);
-  const results = useMemo(() => {
-    return searchAll(debouncedQuery, { commits, branches, stashes });
-  }, [debouncedQuery, commits, branches, stashes]);
+  const [results, setResults] = useState<SearchResult[]>([]);
 
   useEffect(() => {
     let active = true;
     if (debouncedQuery.trim()) {
+      searchAll(debouncedQuery, { commits, branches, stashes }).then(res => {
+        if (active) setResults(res);
+      });
       searchGithubOnline(debouncedQuery).then(res => {
         if (active) setGithubResults(res);
       });
     } else {
+      setResults([]);
       setGithubResults([]);
     }
     return () => { active = false; };
-  }, [debouncedQuery]);
-  
+  }, [debouncedQuery, commits, branches, stashes]);
+
   // Limit results for performance (top 50)
-  const limitedResults = useMemo(() => {
-    return [...githubResults, ...results].slice(0, 50);
-  }, [githubResults, results]);
+  const limitedResults = [...githubResults, ...results].slice(0, 50);
 
   // Handle result selection (memoized callback)
   const handleSelectResult = useCallback((result: SearchResult) => {
