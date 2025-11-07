@@ -393,6 +393,10 @@ fn get_commits(path: String, limit: Option<usize>) -> Result<Vec<Commit>, String
         let commit = repo.find_commit(oid)
             .map_err(|e| format!("Failed to find commit: {}", e))?;
 
+        // Convert hash once and reuse
+        let hash = oid.to_string();
+        let short_hash = hash[..7].to_string();
+
         // Get commit message
         let message = commit.message()
             .unwrap_or("(no message)")
@@ -422,8 +426,8 @@ fn get_commits(path: String, limit: Option<usize>) -> Result<Vec<Commit>, String
         };
 
         commits.push(Commit {
-            hash: oid.to_string(),
-            short_hash: oid.to_string()[..7].to_string(),
+            hash,
+            short_hash,
             message,
             author_name,
             author_email,
