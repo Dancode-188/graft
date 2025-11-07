@@ -66,65 +66,55 @@ export function calculateGraphLayout(commits: Commit[]): GraphLayout {
     });
   });
 
-  // Track which lanes are in use at each commit index
-  const activeLanes = new Map<number, Set<number>>(); // index -> set of active lanes
-  
-  // Two-pass algorithm:
-  // Pass 1: Identify branch points and assign lanes to branches
-  // We process FORWARD (newest to oldest) and assign lanes when we see divergence
-  
+  // Track which lanes are currently in use
+  const usedLanes = new Set<number>();
+  // Map from parent hash to lane to allow children to inherit lanes
+  const parentLaneMap = new Map<string, number>();
+
   for (let index = 0; index < commits.length; index++) {
     const commit = commits[index];
-    
+
     // If this commit already has a lane assigned, skip
     if (laneMap.has(commit.hash)) {
       continue;
     }
-    
-    // Check if this commit is the first child of its parent
+
+    let lane: number;
     if (commit.parent_hashes.length > 0) {
       const parentHash = commit.parent_hashes[0];
       const siblings = childrenMap.get(parentHash) || [];
       const isFirstChild = siblings[0] === commit.hash;
-      
+
       if (isFirstChild) {
-        // First child: check if parent has a lane, otherwise start at 0
-        const parentLane = laneMap.get(parentHash);
+        // First child: inherit parent's lane if possible
+        const parentLane = parentLaneMap.get(parentHash);
         if (parentLane !== undefined) {
-          laneMap.set(commit.hash, parentLane);
+          lane = parentLane;
         } else {
-          // Parent not assigned yet, assign based on available lanes
-          const availableLanes = activeLanes.get(index) || new Set();
-          const lane = findAvailableLane(availableLanes);
-          laneMap.set(commit.hash, lane);
-          laneMap.set(parentHash, lane); // Also assign to parent
-          maxLane = Math.max(maxLane, lane);
+          lane = findAvailableLane(usedLanes);
         }
       } else {
-        // NOT first child - this is a branch! Get new lane
-        const availableLanes = activeLanes.get(index) || new Set();
-        const lane = findAvailableLane(availableLanes);
-        laneMap.set(commit.hash, lane);
-        maxLane = Math.max(maxLane, lane);
+        // Not first child: new branch, get new lane
+        lane = findAvailableLane(usedLanes);
       }
     } else {
       // Root commit - assign lane 0
-      laneMap.set(commit.hash, 0);
+      lane = 0;
     }
-    
-    // Mark this lane as active for subsequent commits
-    const currentLane = laneMap.get(commit.hash) || 0;
-    for (let i = index; i < commits.length; i++) {
-      if (!activeLanes.has(i)) {
-        activeLanes.set(i, new Set());
-      }
-      activeLanes.get(i)!.add(currentLane);
-      
-      // Stop if we reach a merge point for this lane
-      const futureCommit = commits[i];
-      if (futureCommit.parent_hashes.length > 1 && 
-          futureCommit.parent_hashes.includes(commit.hash)) {
-        break;
+
+    laneMap.set(commit.hash, lane);
+    parentLaneMap.set(commit.hash, lane);
+    usedLanes.add(lane);
+    maxLane = Math.max(maxLane, lane);
+
+    // If this commit is a merge (multiple parents), free up lanes of merged parents
+    if (commit.parent_hashes.length > 1) {
+      for (let i = 1; i < commit.parent_hashes.length; i++) {
+        const mergedParent = commit.parent_hashes[i];
+        const mergedLane = parentLaneMap.get(mergedParent);
+        if (mergedLane !== undefined) {
+          usedLanes.delete(mergedLane);
+        }
       }
     }
   }
