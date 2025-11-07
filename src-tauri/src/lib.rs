@@ -264,7 +264,7 @@ fn open_repository(path: String) -> Result<RepoInfo, String> {
 }
 
 #[tauri::command]
-fn get_commits(path: String, limit: Option<usize>) -> Result<Vec<Commit>, String> {
+fn get_commits(path: String, offset: Option<usize>, limit: Option<usize>) -> Result<Vec<Commit>, String> {
     // Open the repository
     let repo = Repository::open(&path)
         .map_err(|e| format!("Failed to open repository: {}", e))?;
@@ -275,9 +275,11 @@ fn get_commits(path: String, limit: Option<usize>) -> Result<Vec<Commit>, String
         .and_then(|h| h.shorthand().map(|s| s.to_string()));
 
     // Build a map of commit OIDs to branch references
+    // OPTIMIZATION: Collect branch OIDs for revwalk at the same time
     let mut oid_to_branches: std::collections::HashMap<git2::Oid, Vec<BranchRef>> = std::collections::HashMap::new();
+    let mut branch_oids: Vec<git2::Oid> = Vec::new();
 
-    // Iterate through all branches (local and remote)
+    // Iterate through all branches ONCE (local and remote)
     let branches = repo.branches(None)
         .map_err(|e| format!("Failed to iterate branches: {}", e))?;
 
@@ -297,6 +299,7 @@ fn get_commits(path: String, limit: Option<usize>) -> Result<Vec<Commit>, String
         if let Some(oid) = reference.target() {
             let is_current = !is_remote && head_branch.as_ref().map_or(false, |hb| hb == &branch_name);
             
+            // Build branch map
             oid_to_branches
                 .entry(oid)
                 .or_insert_with(Vec::new)
@@ -305,6 +308,9 @@ fn get_commits(path: String, limit: Option<usize>) -> Result<Vec<Commit>, String
                     is_remote,
                     is_current,
                 });
+            
+            // Collect OID for revwalk (done in same pass!)
+            branch_oids.push(oid);
         }
     }
 
@@ -349,22 +355,13 @@ fn get_commits(path: String, limit: Option<usize>) -> Result<Vec<Commit>, String
     revwalk.set_sorting(Sort::TIME)
         .map_err(|e| format!("Failed to set sorting: {}", e))?;
 
-    // Push ALL branch heads to revwalk (equivalent to git log --all)
-    // This ensures we see commits from all branches, not just HEAD
-    let branches = repo.branches(None)
-        .map_err(|e| format!("Failed to iterate branches: {}", e))?;
-
+    // Push all branch heads to revwalk (equivalent to git log --all)
+    // OPTIMIZATION: Use the OIDs we collected earlier (no second iteration!)
     let mut has_pushed_ref = false;
-    for branch_result in branches {
-        let (branch, _branch_type) = branch_result
-            .map_err(|e| format!("Failed to get branch: {}", e))?;
-
-        let reference = branch.get();
-        if let Some(oid) = reference.target() {
-            revwalk.push(oid)
-                .map_err(|e| format!("Failed to push branch: {}", e))?;
-            has_pushed_ref = true;
-        }
+    for oid in branch_oids {
+        revwalk.push(oid)
+            .map_err(|e| format!("Failed to push branch: {}", e))?;
+        has_pushed_ref = true;
     }
 
     // If no branches were found (shouldn't happen), fall back to HEAD
@@ -375,16 +372,28 @@ fn get_commits(path: String, limit: Option<usize>) -> Result<Vec<Commit>, String
 
     // Collect commits
     let mut commits = Vec::new();
+    let offset = offset.unwrap_or(0); // Default offset is 0
     let max_commits = limit.unwrap_or(100); // Default to 100 commits
+    let end_index = offset + max_commits;
 
     for (index, oid_result) in revwalk.enumerate() {
-        if index >= max_commits {
+        // Skip commits before offset
+        if index < offset {
+            continue;
+        }
+        
+        // Stop when we've collected enough commits
+        if index >= end_index {
             break;
         }
 
         let oid = oid_result.map_err(|e| format!("Failed to get commit OID: {}", e))?;
         let commit = repo.find_commit(oid)
             .map_err(|e| format!("Failed to find commit: {}", e))?;
+
+        // Convert hash once and reuse
+        let hash = oid.to_string();
+        let short_hash = hash[..7].to_string();
 
         // Get commit message
         let message = commit.message()
@@ -403,21 +412,20 @@ fn get_commits(path: String, limit: Option<usize>) -> Result<Vec<Commit>, String
             .map(|p| p.id().to_string())
             .collect();
 
-        // Get branches pointing to this commit
-        let branches = oid_to_branches
-            .get(&oid)
-            .cloned()
-            .unwrap_or_default();
-
-        // Get tags pointing to this commit
-        let tags = oid_to_tags
-            .get(&oid)
-            .cloned()
-            .unwrap_or_default();
+        // OPTIMIZATION: Only include branches/tags for first 100 commits
+        // Most users only see the recent commits, so no need to include refs for all 10,000
+        let (branches, tags) = if index < 100 {
+            (
+                oid_to_branches.get(&oid).cloned().unwrap_or_default(),
+                oid_to_tags.get(&oid).cloned().unwrap_or_default(),
+            )
+        } else {
+            (vec![], vec![])
+        };
 
         commits.push(Commit {
-            hash: oid.to_string(),
-            short_hash: oid.to_string()[..7].to_string(),
+            hash,
+            short_hash,
             message,
             author_name,
             author_email,
