@@ -16,7 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **SSH & HTTPS**: Both authentication methods now supported
 - **Push Functionality**: Push now works with all supported authentication
 
+
 ### ✨ Improvements
+- **Performance**: Commit graph layout benchmarks at **16ms** for 10,000 commits (measured in Vitest performance test)
 - **Versioning**: Updated all version references to `1.0.4-beta.1` across the app, config, and documentation
 - **README Badge**: Updated version badge to use a compatible format for shields.io
 - **GUI Version Display**: GUI now shows the correct prerelease version
