@@ -31,7 +31,7 @@ export function PushDialog({
 
   // Force push button hold logic
   useEffect(() => {
-    let interval: number;
+  let interval: ReturnType<typeof setInterval>;
     if (isHolding && holdProgress < 100) {
       interval = setInterval(() => {
         setHoldProgress((prev) => {
