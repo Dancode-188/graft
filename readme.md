@@ -8,7 +8,7 @@
 - ![Status](https://img.shields.io/badge/status-Production%20Ready-brightgreen)
 - ![Platforms](https://img.shields.io/badge/platforms-windows%20%7C%20macos%20%7C%20linux-blueviolet)
 - ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)
-- [![Download EXE (KernFerm)](https://img.shields.io/badge/click-here-to-download-graft.exe-for-windows-blue?logo=windows)](https://github.com/KernFerm/graft/releases/download/Graft-Application-EXE/graft.exe)
+- [![Download EXE (KernFerm)](https://img.shields.io/badge/click--here--to--download--graft.exe--for--windows-blue?logo=windows)](https://github.com/KernFerm/graft/releases/download/Graft-Application-EXE/graft.exe)
 - [![Downloads](https://img.shields.io/github/downloads/KernFerm/graft/total.svg?label=Downloads)](https://github.com/KernFerm/graft/releases)
 
 
