@@ -31,6 +31,40 @@ export async function searchGithubOnline(query: string): Promise<SearchResult[]>
 }
 // Quick Search Engine - Unified search across all data types
 import { SearchResult } from './types';
+// Web Worker for commit search
+let commitWorker: Worker | null = null;
+function getCommitWorker(): Worker {
+  if (!commitWorker) {
+    commitWorker = new Worker(new URL('./commitSearch.worker.ts', import.meta.url));
+  }
+  return commitWorker;
+}
+
+/**
+ * Search commits using a Web Worker and fuse.js
+ */
+export function searchCommitsAsync(query: string, commits: any[]): Promise<SearchResult[]> {
+  return new Promise((resolve) => {
+    if (!query.trim()) return resolve([]);
+    const worker = getCommitWorker();
+    const handleMessage = (e: MessageEvent) => {
+      const filtered = e.data as any[];
+      const results: SearchResult[] = filtered.map(commit => ({
+        type: 'commit',
+        id: commit.hash,
+        title: commit.message.split('\n')[0],
+        subtitle: `${commit.author_name} • ${commit.short_hash}`,
+        icon: '📝',
+        score: 1000, // fuse.js sorts by best match
+        data: commit,
+      }));
+      resolve(results);
+      worker.removeEventListener('message', handleMessage);
+    };
+    worker.addEventListener('message', handleMessage);
+    worker.postMessage({ commits, query });
+  });
+}
 
 /**
  * Simple fuzzy match score calculator
@@ -68,36 +102,7 @@ function fuzzyScore(query: string, text: string): number {
   return queryIndex === queryLower.length ? score : 0;
 }
 
-/**
- * Search commits
- */
-export function searchCommits(query: string, commits: any[]): SearchResult[] {
-  if (!query.trim()) return [];
-  
-  const results: SearchResult[] = [];
-  
-  for (const commit of commits) {
-    const messageScore = fuzzyScore(query, commit.message);
-    const authorScore = fuzzyScore(query, commit.author_name);
-    const hashScore = fuzzyScore(query, commit.short_hash);
-    
-    const bestScore = Math.max(messageScore, authorScore, hashScore);
-    
-    if (bestScore > 0) {
-      results.push({
-        type: 'commit',
-        id: commit.hash,
-        title: commit.message.split('\n')[0], // First line only
-        subtitle: `${commit.author_name} • ${commit.short_hash}`,
-        icon: '📝',
-        score: bestScore,
-        data: commit,
-      });
-    }
-  }
-  
-  return results.sort((a, b) => b.score - a.score);
-}
+// (searchCommits replaced by searchCommitsAsync)
 
 /**
  * Search branches
@@ -163,20 +168,22 @@ export function searchStashes(query: string, stashes: any[]): SearchResult[] {
 /**
  * Unified search across all data types
  */
-export function searchAll(
+export async function searchAll(
   query: string,
   data: {
     commits: any[];
     branches: any[];
     stashes: any[];
   }
-): SearchResult[] {
+): Promise<SearchResult[]> {
   if (!query.trim()) return [];
-  
-  const commitResults = searchCommits(query, data.commits);
-  const branchResults = searchBranches(query, data.branches);
-  const stashResults = searchStashes(query, data.stashes);
-  
+
+  const [commitResults, branchResults, stashResults] = await Promise.all([
+    searchCommitsAsync(query, data.commits),
+    Promise.resolve(searchBranches(query, data.branches)),
+    Promise.resolve(searchStashes(query, data.stashes)),
+  ]);
+
   // Combine and sort by score
   const allResults = [...commitResults, ...branchResults, ...stashResults];
   return allResults.sort((a, b) => b.score - a.score);
