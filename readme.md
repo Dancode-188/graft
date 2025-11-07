@@ -504,7 +504,7 @@ Graft is in active development! We welcome contributions.
 
 ## 🐛 Known Issues
 
-Check [GitHub Issues](https://github.com/Dancode-188/graft/issues) for current bugs and feature requests.
+> - All issues have been applied and fixed on the BubblesTheDev GRAFT repo with beta version 1.0.4beta-1. Note: dancode-188 may not have updated his repo yet. For any new issues, check [GitHub Issues](https://github.com/Dancode-188/graft/issues).
 
 ---
 
