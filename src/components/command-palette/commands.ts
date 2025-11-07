@@ -317,5 +317,16 @@ export function createCommands(actions: CommandActions): Command[] {
       category: 'help',
       action: actions.showShortcuts,
     },
+    {
+      id: 'help.enable-narrator',
+      label: 'Enable Windows Narrator',
+      description: 'Start the built-in Windows screen reader (Ctrl+Win+Enter)',
+      icon: '🦻',
+      keywords: ['accessibility', 'screen reader', 'narrator', 'windows', 'voice'],
+      category: 'help',
+      action: () => {
+        alert('To enable Windows Narrator, press Ctrl + Windows + Enter on your keyboard.');
+      },
+    },
   ];
 }
