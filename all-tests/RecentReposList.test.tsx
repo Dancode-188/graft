@@ -1,0 +1,1 @@
+export * from '../src/components/__tests__/RecentReposList.test';

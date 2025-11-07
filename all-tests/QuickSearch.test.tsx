@@ -1,0 +1,1 @@
+export * from '../src/components/quick-search/QuickSearch.test';

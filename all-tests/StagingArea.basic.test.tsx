@@ -1,0 +1,1 @@
+export * from '../src/components/staging/__tests__/StagingArea.basic.test';
