@@ -29,6 +29,8 @@ import { QuickSearch } from "./components/quick-search";
 // Remove stray state declaration outside App
 import { StashEntry } from "./components/stash/types";
 import { ThemeToggle } from "./components/ThemeToggle";
+import { RecentReposList } from "./components/RecentReposList";
+import { saveRecentRepo } from "./utils/recentRepos";
 
 interface RepoInfo {
   name: string;
@@ -685,6 +687,13 @@ function App() {
         });
         setRepoInfo(info);
 
+        // Save to recent repos
+        saveRecentRepo({
+          path: selected,
+          name: info.name,
+          lastOpened: Date.now(),
+        });
+
         // Fetch commits from the repository
         const commitList = await invoke<Commit[]>("get_commits", {
           path: selected,
@@ -1141,10 +1150,20 @@ function App() {
 
   const handleCherryPickCommit = async (commitHash: string) => {
     if (!repoInfo) return;
-    
     try {
-      await invoke('cherrypick_commit', { path: repoInfo.path, commitHash });
-      await handleBranchChange(); // Refresh commits
+      const result = await invoke<{ success: boolean; conflicts: Array<{ path: string; conflict_type: string }>; message: string }>(
+        'cherry_pick_commit',
+        { path: repoInfo.path, commitHash }
+      );
+      if (result.success) {
+        await handleBranchChange();
+        alert(result.message || 'Cherry-pick successful!');
+      } else if (result.conflicts && result.conflicts.length > 0) {
+        alert('Cherry-pick resulted in conflicts. Please resolve them and commit manually.');
+        await handleBranchChange();
+      } else {
+        alert(result.message || 'Cherry-pick failed.');
+      }
     } catch (err) {
       console.error('Failed to cherry-pick commit:', err);
       alert(`Failed to cherry-pick commit: ${err}`);
@@ -1306,7 +1325,7 @@ function App() {
       <main className="flex-1 flex overflow-hidden">
         {!repoInfo ? (
           <div className="flex-1 flex items-center justify-center p-6">
-            <div className="flex flex-col items-center gap-6 max-w-md text-center animate-fade-in">
+            <div className="flex flex-col items-center gap-6 max-w-md text-center animate-fade-in w-full">
               <div className="text-6xl mb-4">🌿</div>
               <h2 className="text-3xl font-semibold mb-2">Welcome to Graft</h2>
               <p className="text-theme-secondary mb-6">
@@ -1333,6 +1352,11 @@ function App() {
                 {" | "}
                 <kbd className="px-2 py-1 bg-theme-bg rounded text-theme-secondary">{shortcutKey}+F</kbd> Search
               </p>
+
+              {/* Recent Repositories List */}
+              <div className="w-full mt-8">
+                <RecentReposList onOpenRepo={handleOpenRepo} />
+              </div>
             </div>
           </div>
         ) : (
