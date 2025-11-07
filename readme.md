@@ -4,7 +4,7 @@
 
 
 
-![Version](https://img.shields.io/badge/version--1.0.4.1--msi-green)
+![Version](https://img.shields.io/badge/version--1.0.5--green)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Status](https://img.shields.io/badge/status-Production%20Ready-brightgreen)
 ![Platforms](https://img.shields.io/badge/platforms-windows%20%7C%20macos%20%7C%20linux-blueviolet)
@@ -192,7 +192,7 @@ No special shortcut is needed—accessibility is built in by default for all use
 
 ### Download Graft
 
-**Latest Release**: [v1.0.4.1-msi](https://github.com/kernferm/graft)
+**Latest Release**: [v1.0.5](https://github.com/kernferm/graft)
 
 #### Windows
 1. Download one of the installers:
@@ -525,7 +525,7 @@ Graft is in active development! We welcome contributions.
 
 ## 🐛 Known Issues
 
-All issues have been applied and fixed on the BubblesTheDev GRAFT repo with MSI version 1.0.4.1. Note: dancode-188 may not have updated his repo yet. For any new issues, check [GitHub Issues](https://github.com/Dancode-188/graft/issues).
+All issues have been applied and fixed on the BubblesTheDev GRAFT repo with version 1.0.5. Note: dancode-188 may not have updated his repo yet. For any new issues, check [GitHub Issues](https://github.com/Dancode-188/graft/issues).
 
 ---
 
@@ -573,7 +573,7 @@ If you like Graft, give it a ⭐ on GitHub!
 
 ## 🎉 Recent Releases
 
-### v1.0.4.1-msi - Authentication Fix (November 6, 2025) 🎊 LATEST
+### v1.0.5 - Authentication Fix (November 6, 2025) 🎊 LATEST
 
 **Critical Patch**: Fixed Push/Pull Authentication
 
@@ -583,7 +583,7 @@ If you like Graft, give it a ⭐ on GitHub!
 - 🔑 Now works with both SSH and HTTPS authentication
 - ⚡ Push functionality fully working
 
-[View on GitHub Releases](https://github.com/Dancode-188/graft/releases/tag/v1.0.4.1-msi)
+[View on GitHub Releases](https://github.com/Dancode-188/graft/releases/tag/v1.0.5)
 
 ### v1.0.2 - Clean & Ready (November 4, 2025)
 
