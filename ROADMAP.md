@@ -512,6 +512,7 @@ We welcome contributions! See CONTRIBUTING.md for guidelines.
 
 ---
 
+
 ## Stats
 
 **Development Time**: 10 days (Oct 25 - Nov 3, 2025)  
@@ -522,5 +523,6 @@ We welcome contributions! See CONTRIBUTING.md for guidelines.
 **Keyboard Shortcuts**: 20+ shortcuts  
 **Themes**: 2 (dark & light)  
 **Test Cycles**: 1 (solo developer testing)  
+**Test Organization**: All test files are re-exported in `all-tests/` for unified test management.
 
 **Current Status**: 🎉 Production Ready - v1.0.1 Released!
