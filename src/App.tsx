@@ -694,7 +694,6 @@ function App() {
         });
         
         setCommits(initialBatch);
-        console.log(`✅ Loaded ${initialBatch.length} commits (initial batch)`);
 
         // Check if we got a full batch (meaning there might be more)
         if (initialBatch.length === 1000) {
@@ -750,7 +749,6 @@ function App() {
         
         // Append batch to existing commits
         setCommits(prevCommits => [...prevCommits, ...batch]);
-        console.log(`📦 Background loaded batch: offset ${currentOffset}, got ${batch.length} commits`);
         
         currentOffset += batchSize;
         
@@ -760,10 +758,8 @@ function App() {
           break;
         }
       }
-      
-      console.log(`✅ Background loading complete! Total commits: ${currentOffset}`);
     } catch (err) {
-      console.error('❌ Background loading failed:', err);
+      console.error('Background loading failed:', err);
       setHasMoreCommits(false);
     } finally {
       setLoadingMore(false);
