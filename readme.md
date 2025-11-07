@@ -17,9 +17,6 @@
 Graft is a modern Git GUI built with **native performance** (Tauri + Rust), **beautiful design** (React + Tailwind), and a **keyboard-first** approach. It's everything existing Git GUIs should be but aren't.
 
 ### Why Graft?
-
-Existing Git GUIs are either:
-- 🐌 **Too slow** (Electron bloat)
 - 😵 **Too complex** (overwhelming interfaces)
 - 💸 **Too expensive** (subscription models)
 - 🔒 **Too limited** (missing features)
@@ -28,7 +25,6 @@ Existing Git GUIs are either:
 **Graft solves all of this.**
 
 ---
-
 
 ## 📸 Screenshots
 
@@ -42,7 +38,6 @@ Existing Git GUIs are either:
 
 ### Interactive Rebase
 ![Interactive Rebase](screenshots/interactive-rebase.png)
-*Drag-and-drop commit reordering with visual feedback*
 
 ---
 
@@ -504,7 +499,7 @@ Graft is in active development! We welcome contributions.
 
 ## 🐛 Known Issues
 
-> - All issues have been applied and fixed on the BubblesTheDev GRAFT repo with beta version 1.0.4beta-1. Note: dancode-188 may not have updated his repo yet. For any new issues, check [GitHub Issues](https://github.com/Dancode-188/graft/issues).
+All issues have been applied and fixed on the BubblesTheDev GRAFT repo with beta version 1.0.4beta-1. Note: dancode-188 may not have updated his repo yet. For any new issues, check [GitHub Issues](https://github.com/Dancode-188/graft/issues).
 
 ---
 
