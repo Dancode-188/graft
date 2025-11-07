@@ -2,9 +2,11 @@
 
 > A fast, beautiful, keyboard-first Git GUI that doesn't suck.
 
+
 ![Version](https://img.shields.io/badge/version--1.0.4--beta.1-green)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Status](https://img.shields.io/badge/status-Production%20Ready-brightgreen)
+![CI](https://github.com/Dancode-188/graft/actions/workflows/ci.yml/badge.svg)
 
 ---
 
@@ -25,6 +27,7 @@ Existing Git GUIs are either:
 
 ---
 
+
 ## 📸 Screenshots
 
 ### Main Interface
@@ -38,6 +41,25 @@ Existing Git GUIs are either:
 ### Interactive Rebase
 ![Interactive Rebase](screenshots/interactive-rebase.png)
 *Drag-and-drop commit reordering with visual feedback*
+
+---
+
+## 🎬 Demo Videos & Animated GIFs
+
+### Quick Tour (Animated GIF)
+![Quick Tour GIF](screenshots/quick-tour.gif)
+*A fast walkthrough of the main UI, commit graph, and keyboard features.*
+
+### Interactive Rebase Demo (GIF)
+![Interactive Rebase GIF](screenshots/interactive-rebase-demo.gif)
+*See drag-and-drop rebase in action!*
+
+### Full Demo Video
+[![Watch on YouTube](https://img.shields.io/badge/Watch%20Demo%20Video-YouTube-red?logo=youtube)](https://www.youtube.com/watch?v=YOUR_DEMO_VIDEO_LINK)
+
+> **Want to contribute?**
+> - Record a short GIF (under 10MB) showing a feature or workflow and add it to the `screenshots/` folder.
+> - Or upload a demo video to YouTube and submit a PR with the link!
 
 ---
 
@@ -133,9 +155,6 @@ Existing Git GUIs are either:
 ### vs Sublime Merge
 - ✅ **Free** (Sublime Merge: $99)
 - ✅ **More features**
-- ✅ **Command palette**
-- ✅ **Open source**
-
 ### vs GitHub Desktop
 - ✅ **Pro features** (Interactive rebase, stash, etc.)
 - ✅ **Command palette**
@@ -164,7 +183,10 @@ Existing Git GUIs are either:
    You may see a "Windows protected your PC" warning. This is normal for open-source applications that don't have a paid code-signing certificate ($300-500/year).
    
    **Graft is completely safe** - the code is open source and auditable.
-   
+
+## 📁 Project Structure
+
+```
    **To install**:
    - Click **"More info"**
    - Click **"Run anyway"**
@@ -173,8 +195,72 @@ Existing Git GUIs are either:
 
 4. Launch Graft from Start Menu
 
-#### macOS / Linux
+
+#### macOS
 Building from source is currently required (see Development Setup below).
+
+#### Linux
+Graft can be installed and run on most major Linux distributions. Pre-built packages and manual installation instructions are provided below.
+├── all-tests/                   # Centralized re-exports for all test files
+│   ├── CommitGraph.test.tsx
+│   ├── CommitListWithGraph.test.tsx
+│   ├── RecentReposList.test.tsx
+│   ├── ThemeToggle.test.tsx
+│   ├── StagingArea.basic.test.tsx
+│   ├── StagingArea.test.tsx
+│   ├── QuickSearch.test.tsx
+│   └── graphLayout.performance.test.ts
+
+**Tested on:**
+- Ubuntu 22.04 / 24.04
+- Arch Linux
+- Fedora
+- Debian
+- Pop!_OS
+
+**Install via Package:**
+
+**Ubuntu/Debian:**
+```bash
+# Download .deb from releases
+sudo dpkg -i graft_1.0.1_amd64.deb
+```
+
+---
+
+## 🧪 Test Organization
+
+All test files are now re-exported in the `all-tests/` directory at the project root. This allows you to run or manage all tests from a single location, while keeping the original test code in their respective feature folders. Update your test runner configuration if you want to run all tests via `all-tests/`.
+```
+
+**Arch Linux:**
+```bash
+yay -S graft-bin
+```
+
+**Fedora:**
+```bash
+# Download .rpm from releases
+sudo dnf install graft-1.0.1.x86_64.rpm
+```
+
+**Manual Build:**
+See Development Setup below for building from source on any Linux distribution.
+
+**Dependencies:**
+- GTK 3
+- WebKit2GTK
+- libssl
+- libayatana-appindicator3
+- librsvg2
+
+**Known Issues:**
+- Some distributions may require additional permissions for SSH key access.
+- Display or rendering issues may occur on non-GTK desktops.
+- If you encounter missing dependencies, install them as shown in the Development Setup section.
+
+**Help Wanted:**
+If you use Linux, please test Graft on your distribution and report any issues or missing dependencies!
 
 ---
 
