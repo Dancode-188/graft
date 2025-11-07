@@ -453,12 +453,14 @@ See [ROADMAP.md](./ROADMAP.md) for complete details.
 
 ---
 
+
 ## 📈 Performance
 
 Graft is designed for speed:
 
 - **Startup**: <1 second
 - **Large Repos**: Handles 10,000+ commits smoothly
+- **Commit Graph Layout**: 10,000 commits laid out in just **16ms** (benchmarked)
 - **Command Palette**: Opens in <50ms
 - **Search**: Updates in <100ms
 - **Virtual Scrolling**: Smooth with thousands of items
