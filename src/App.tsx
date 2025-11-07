@@ -413,6 +413,10 @@ function App() {
   const [showStats, setShowStats] = useState(false);
   const [rightPanelTab, setRightPanelTab] = useState<'details' | 'staging'>('staging');
   
+  // Pagination state
+  const [hasMoreCommits, setHasMoreCommits] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  
   // Branch sidebar collapsed by default, with localStorage persistence
   const [showBranchSidebar, setShowBranchSidebar] = useState(() => {
     const saved = localStorage.getItem('graft-show-branch-sidebar');
@@ -682,18 +686,24 @@ function App() {
         });
         setRepoInfo(info);
 
-        // Fetch commits from the repository
-        console.time('⏱️ get_commits backend call');
-        const commitList = await invoke<Commit[]>("get_commits", {
+        // Fetch initial batch of commits from the repository (pagination)
+        const initialBatch = await invoke<Commit[]>("get_commits", {
           path: selected,
-          limit: 10000, // Support large repos (10x increase)
+          offset: 0,
+          limit: 1000, // Initial load: 1000 commits for instant feel
         });
-        console.timeEnd('⏱️ get_commits backend call');
         
-        console.time('⏱️ setCommits (React state update)');
-        setCommits(commitList);
-        console.timeEnd('⏱️ setCommits (React state update)');
-        console.log(`📊 Loaded ${commitList.length} commits`);
+        setCommits(initialBatch);
+        console.log(`✅ Loaded ${initialBatch.length} commits (initial batch)`);
+
+        // Check if we got a full batch (meaning there might be more)
+        if (initialBatch.length === 1000) {
+          setHasMoreCommits(true);
+          // Start background loading remaining commits
+          loadRemainingCommitsInBackground(selected, 1000, 10000);
+        } else {
+          setHasMoreCommits(false);
+        }
 
         // Load branches and stashes
         await loadBranches(selected);
@@ -707,6 +717,56 @@ function App() {
       setStashes([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Background loading function - loads remaining commits without blocking UI
+  const loadRemainingCommitsInBackground = async (
+    repoPath: string,
+    startOffset: number,
+    totalTarget: number
+  ) => {
+    const batchSize = 1000;
+    let currentOffset = startOffset;
+    
+    setLoadingMore(true);
+    
+    try {
+      while (currentOffset < totalTarget) {
+        // Small delay to prevent UI blocking
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
+        const batch = await invoke<Commit[]>("get_commits", {
+          path: repoPath,
+          offset: currentOffset,
+          limit: batchSize,
+        });
+        
+        // If we got fewer commits than requested, we've reached the end
+        if (batch.length === 0) {
+          setHasMoreCommits(false);
+          break;
+        }
+        
+        // Append batch to existing commits
+        setCommits(prevCommits => [...prevCommits, ...batch]);
+        console.log(`📦 Background loaded batch: offset ${currentOffset}, got ${batch.length} commits`);
+        
+        currentOffset += batchSize;
+        
+        // If we got fewer than batchSize, we've reached the end
+        if (batch.length < batchSize) {
+          setHasMoreCommits(false);
+          break;
+        }
+      }
+      
+      console.log(`✅ Background loading complete! Total commits: ${currentOffset}`);
+    } catch (err) {
+      console.error('❌ Background loading failed:', err);
+      setHasMoreCommits(false);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -732,12 +792,22 @@ function App() {
     // Refresh commit history after creating a commit
     if (repoInfo) {
       try {
-        const commitList = await invoke<Commit[]>("get_commits", {
+        // Reload with pagination
+        const initialBatch = await invoke<Commit[]>("get_commits", {
           path: repoInfo.path,
-          limit: 10000,
+          offset: 0,
+          limit: 1000,
         });
-        setCommits(commitList);
+        setCommits(initialBatch);
         setSelectedCommitIndex(-1); // Deselect after refresh
+        
+        // Start background loading if needed
+        if (initialBatch.length === 1000) {
+          setHasMoreCommits(true);
+          loadRemainingCommitsInBackground(repoInfo.path, 1000, 10000);
+        } else {
+          setHasMoreCommits(false);
+        }
       } catch (err) {
         console.error("Failed to refresh commits:", err);
       }
@@ -754,13 +824,22 @@ function App() {
         });
         setRepoInfo(info);
 
-        // Refresh commit list
-        const commitList = await invoke<Commit[]>("get_commits", {
+        // Refresh commit list with pagination
+        const initialBatch = await invoke<Commit[]>("get_commits", {
           path: repoInfo.path,
-          limit: 10000,
+          offset: 0,
+          limit: 1000,
         });
-        setCommits(commitList);
+        setCommits(initialBatch);
         setSelectedCommitIndex(-1);
+        
+        // Start background loading if needed
+        if (initialBatch.length === 1000) {
+          setHasMoreCommits(true);
+          loadRemainingCommitsInBackground(repoInfo.path, 1000, 10000);
+        } else {
+          setHasMoreCommits(false);
+        }
 
         // Refresh branches and stashes
         await loadBranches(repoInfo.path);
@@ -1727,6 +1806,18 @@ function App() {
             <>
               <span className="text-theme-tertiary">│</span>
               <span>{commits.length} commits loaded</span>
+              {loadingMore && (
+                <>
+                  <span className="text-theme-tertiary">│</span>
+                  <span className="flex items-center gap-1 text-graft-400 animate-pulse">
+                    <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Loading more...
+                  </span>
+                </>
+              )}
             </>
           )}
           {selectedCommit && (
