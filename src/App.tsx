@@ -414,7 +414,7 @@ function App() {
   const [rightPanelTab, setRightPanelTab] = useState<'details' | 'staging'>('staging');
   
   // Pagination state
-  const [hasMoreCommits, setHasMoreCommits] = useState(true);
+  const [_hasMoreCommits, setHasMoreCommits] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   
   // Branch sidebar collapsed by default, with localStorage persistence
@@ -1535,12 +1535,22 @@ function App() {
             {/* Commit List with Graph */}
             <div className="relative flex-1 overflow-hidden h-full">
               {commits.length > 0 ? (
-                <CommitListWithGraph
-                  commits={commits}
-                  selectedCommit={selectedCommit}
-                  onSelectCommit={handleSelectCommit}
-                  onCommitContextMenu={handleCommitContextMenu}
-                />
+                <>
+                  <CommitListWithGraph
+                    commits={commits}
+                    selectedCommit={selectedCommit}
+                    onSelectCommit={handleSelectCommit}
+                    onCommitContextMenu={handleCommitContextMenu}
+                  />
+                  
+                  {/* Background Loading Indicator */}
+                  {loadingMore && (
+                    <div className="absolute bottom-4 right-4 bg-theme-surface border border-theme-default rounded-lg px-4 py-2 shadow-lg flex items-center gap-2 text-sm text-theme-secondary">
+                      <div className="animate-spin h-4 w-4 border-2 border-graft-500 border-t-transparent rounded-full"></div>
+                      <span>Loading more commits...</span>
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="flex-1 flex items-center justify-center text-theme-tertiary">
                   No commits found in this repository
