@@ -111,7 +111,7 @@ export const CommitListWithGraph: React.FC<CommitListWithGraphProps> = ({
   };
 
   return (
-    <div className="flex flex-1 overflow-hidden gap-0 bg-theme-bg w-full h-full">
+    <div className="flex flex-1 overflow-hidden gap-0 bg-theme-bg w-full h-full" role="region" aria-label="Commit list with graph">
       {/* Graph - Scrollable SVG */}
       <div
         ref={graphScrollRef}
@@ -130,6 +130,8 @@ export const CommitListWithGraph: React.FC<CommitListWithGraphProps> = ({
         ref={listScrollRef}
         className="flex-1 overflow-auto"
         style={{ height: '100%', minHeight: 0 }}
+        role="list"
+        aria-label="Commit list"
       >
         <div className="space-y-2 px-6 py-4">
           {/* Invisible spacer for items above visible range */}
@@ -156,6 +158,10 @@ export const CommitListWithGraph: React.FC<CommitListWithGraphProps> = ({
                     ? 'border-graft-500 bg-theme-surface-hover ring-2 ring-graft-500/50 shadow-lg shadow-graft-500/20'
                     : 'border-theme-default hover:border-theme-hover'
                 }`}
+                role="listitem"
+                aria-selected={isSelected}
+                tabIndex={0}
+                aria-label={`Commit ${commit.short_hash}: ${commit.message.split('\n')[0]} by ${commit.author_name}, ${getTimeAgo(commit.timestamp)}`}
               >
                 <div className="flex items-start gap-4">
                   <div className="flex-shrink-0 w-8 flex items-center justify-center">
