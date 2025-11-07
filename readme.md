@@ -205,23 +205,13 @@ No special shortcut is needed—accessibility is built in by default for all use
    
   **Graft is completely safe** – the code is open source and auditable.
 
-## 📁 Project Structure
-
-```
-   **To install**:
-   - Click **"More info"**
-   - Click **"Run anyway"**
-   
-   This warning appears for most open-source Windows apps, including early versions of VS Code and many other trusted tools.
-
-4. Launch Graft from Start Menu
-
 
 #### macOS
 Building from source is currently required (see Development Setup below).
 
 #### Linux
 Graft can be installed and run on most major Linux distributions. Pre-built packages and manual installation instructions are provided below.
+```
 ├── all-tests/                   # Centralized re-exports for all test files
 │   ├── CommitGraph.test.tsx
 │   ├── CommitListWithGraph.test.tsx
@@ -231,6 +221,7 @@ Graft can be installed and run on most major Linux distributions. Pre-built pack
 │   ├── StagingArea.test.tsx
 │   ├── QuickSearch.test.tsx
 │   └── graphLayout.performance.test.ts
+```
 
 **Tested on:**
 - Ubuntu 22.04 / 24.04
