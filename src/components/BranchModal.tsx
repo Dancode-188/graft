@@ -110,11 +110,11 @@ export function BranchModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-theme-overlay backdrop-blur-sm">
-      <div className="bg-theme-surface border border-theme-default rounded-lg shadow-2xl w-full max-w-md mx-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-theme-overlay backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="branch-modal-title">
+      <div className="bg-theme-surface border border-theme-default rounded-lg shadow-2xl w-full max-w-md mx-4" role="document">
         {/* Header */}
         <div className="px-6 py-4 border-b border-theme-default">
-          <h2 className="text-lg font-semibold text-theme-primary">
+          <h2 className="text-lg font-semibold text-theme-primary" id="branch-modal-title">
             {mode === 'create' && '🌿 Create New Branch'}
             {mode === 'rename' && '✏️ Rename Branch'}
             {mode === 'delete' && '🗑️ Delete Branch'}
