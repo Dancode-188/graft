@@ -1,3 +1,254 @@
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_cherry_pick_commit_conflict() {
+        let (_tmp, repo_path) = init_test_repo();
+        let repo = Repository::open(&repo_path).unwrap();
+        // Commit 1: file.txt = 'a'
+        std::fs::write(repo.path().parent().unwrap().join("file.txt"), b"a").unwrap();
+        {
+            let mut index = repo.index().unwrap();
+            index.add_path(std::path::Path::new("file.txt")).unwrap();
+            index.write().unwrap();
+        }
+        let tree_id = repo.index().unwrap().write_tree().unwrap();
+        let tree = repo.find_tree(tree_id).unwrap();
+        let sig = repo.signature().unwrap();
+        let parent = repo.head().unwrap().peel_to_commit().unwrap();
+        repo.commit(Some("HEAD"), &sig, &sig, "commit1", &tree, &[&parent]).unwrap();
+
+        // Branch off for conflict
+        let head = repo.head().unwrap().peel_to_commit().unwrap();
+        repo.branch("feature", &head, false).unwrap();
+
+        // Commit 2: file.txt = 'b' on main
+        std::fs::write(repo.path().parent().unwrap().join("file.txt"), b"b").unwrap();
+        {
+            let mut index = repo.index().unwrap();
+            index.add_path(std::path::Path::new("file.txt")).unwrap();
+            index.write().unwrap();
+        }
+        let tree_id2 = repo.index().unwrap().write_tree().unwrap();
+        let tree2 = repo.find_tree(tree_id2).unwrap();
+        let sig2 = repo.signature().unwrap();
+        let parent2 = repo.head().unwrap().peel_to_commit().unwrap();
+        let commit2 = repo.commit(Some("HEAD"), &sig2, &sig2, "commit2", &tree2, &[&parent2]).unwrap();
+
+        // Checkout feature branch and change file.txt = 'c'
+        repo.set_head("refs/heads/feature").unwrap();
+        repo.checkout_head(None).unwrap();
+        std::fs::write(repo.path().parent().unwrap().join("file.txt"), b"c").unwrap();
+        {
+            let mut index = repo.index().unwrap();
+            index.add_path(std::path::Path::new("file.txt")).unwrap();
+            index.write().unwrap();
+        }
+        let tree_id3 = repo.index().unwrap().write_tree().unwrap();
+        let tree3 = repo.find_tree(tree_id3).unwrap();
+        let sig3 = repo.signature().unwrap();
+        let parent3 = repo.head().unwrap().peel_to_commit().unwrap();
+        repo.commit(Some("HEAD"), &sig3, &sig3, "commit3", &tree3, &[&parent3]).unwrap();
+
+        // Cherry-pick commit2 onto feature (should conflict)
+        let result = super::cherry_pick_commit(repo_path.clone(), commit2.to_string());
+        assert!(result.is_ok());
+        let res = result.unwrap();
+        assert!(!res.success);
+        assert!(res.message.contains("conflict") || res.message.contains("Cherry-pick resulted in conflicts"));
+        assert!(!res.conflicts.is_empty());
+    }
+    #[test]
+    fn test_cherry_pick_commit_success() {
+        let (_tmp, repo_path) = init_test_repo();
+        let repo = Repository::open(&repo_path).unwrap();
+        // Create a second commit
+        std::fs::write(repo.path().parent().unwrap().join("file.txt"), b"hello").unwrap();
+        {
+            let mut index = repo.index().unwrap();
+            index.add_path(std::path::Path::new("file.txt")).unwrap();
+            index.write().unwrap();
+        }
+        let tree_id = repo.index().unwrap().write_tree().unwrap();
+        let tree = repo.find_tree(tree_id).unwrap();
+        let sig = repo.signature().unwrap();
+        let parent = repo.head().unwrap().peel_to_commit().unwrap();
+        let commit_id = repo.commit(Some("HEAD"), &sig, &sig, "second", &tree, &[&parent]).unwrap();
+
+        // Create a new branch and checkout
+        repo.branch("feature", &parent, false).unwrap();
+        repo.set_head("refs/heads/feature").unwrap();
+        repo.checkout_head(None).unwrap();
+
+        // Cherry-pick the second commit onto feature
+        let result = super::cherry_pick_commit(repo_path.clone(), commit_id.to_string());
+        assert!(result.is_ok());
+        let res = result.unwrap();
+        assert!(res.success);
+        assert!(res.message.contains("Cherry-pick successful"));
+    }
+    use git2::Repository;
+
+    fn init_test_repo() -> (tempfile::TempDir, String) {
+        let tmp_dir = tempfile::tempdir().expect("create temp dir");
+        let repo = Repository::init(tmp_dir.path()).expect("init repo");
+        // Create initial commit
+        let mut index = repo.index().unwrap();
+        let tree_id = index.write_tree().unwrap();
+        let tree = repo.find_tree(tree_id).unwrap();
+        let sig = repo.signature().unwrap();
+        repo.commit(Some("HEAD"), &sig, &sig, "init", &tree, &[]).unwrap();
+        let path_str = tmp_dir.path().to_str().unwrap().to_string();
+        (tmp_dir, path_str)
+    }
+
+    #[test]
+    fn test_cherry_pick_commit_noop() {
+    let (_tmp, repo_path) = init_test_repo();
+    let repo = Repository::open(&repo_path).unwrap();
+    let head = repo.head().unwrap();
+    let commit = head.peel_to_commit().unwrap();
+    // Cherry-pick the only commit (should be a no-op or error)
+    let result = super::cherry_pick_commit(repo_path, commit.id().to_string());
+    assert!(result.is_ok());
+    let res = result.unwrap();
+    // Should not succeed, as there is nothing to cherry-pick onto
+    assert!(!res.success || res.message.contains("failed") || res.message.contains("Cherry-pick failed"));
+    }
+
+    #[test]
+    fn test_open_repository() {
+    let (_tmp, repo_path) = init_test_repo();
+    let info = super::open_repository(repo_path.clone());
+    assert!(info.is_ok());
+    let repo_info = info.unwrap();
+    assert_eq!(repo_info.name, std::path::Path::new(&repo_path).file_name().unwrap().to_str().unwrap());
+    }
+}
+#[derive(Debug, Serialize)]
+struct CherryPickResult {
+    success: bool,
+    conflicts: Vec<ConflictFile>,
+    message: String,
+}
+
+/// Cherry-pick a commit onto the current branch
+#[tauri::command]
+fn cherry_pick_commit(path: String, commit_hash: String) -> Result<CherryPickResult, String> {
+    let repo = match Repository::open(&path) {
+        Ok(r) => r,
+        Err(e) => return Err(format!("Failed to open repository: {}", e)),
+    };
+
+    let oid = match git2::Oid::from_str(&commit_hash) {
+        Ok(oid) => oid,
+        Err(e) => return Err(format!("Invalid commit hash: {}", e)),
+    };
+
+    let commit = match repo.find_commit(oid) {
+        Ok(c) => c,
+        Err(e) => return Err(format!("Failed to find commit: {}", e)),
+    };
+
+    // Prepare cherry-pick options
+    let mut opts = git2::CherrypickOptions::new();
+    opts.mainline(0); // 0 for non-merge commits
+
+    // Perform the cherry-pick
+    let result = repo.cherrypick(&commit, Some(&mut opts));
+    if let Err(e) = result {
+        return Ok(CherryPickResult {
+            success: false,
+            conflicts: vec![],
+            message: format!("Cherry-pick failed: {}", e),
+        });
+    }
+
+    // Check for conflicts
+    let mut index = match repo.index() {
+        Ok(idx) => idx,
+        Err(e) => return Err(format!("Failed to get index: {}", e)),
+    };
+    if index.has_conflicts() {
+        // Collect conflict files
+        let mut conflicts = Vec::new();
+        match index.conflicts() {
+            Ok(conflict_iter) => {
+                for entry in conflict_iter {
+                    if let Ok(conflict) = entry {
+                        if let Some(our) = &conflict.our {
+                            conflicts.push(ConflictFile {
+                                path: String::from_utf8_lossy(&our.path).to_string(),
+                                conflict_type: "conflict".to_string(),
+                            });
+                        }
+                        if let Some(their) = &conflict.their {
+                            conflicts.push(ConflictFile {
+                                path: String::from_utf8_lossy(&their.path).to_string(),
+                                conflict_type: "conflict".to_string(),
+                            });
+                        }
+                    }
+                }
+            }
+            Err(_) => {
+                // If we can't get conflicts, just return an empty list
+            }
+        }
+        return Ok(CherryPickResult {
+            success: false,
+            conflicts,
+            message: "Cherry-pick resulted in conflicts. Please resolve them and commit manually.".to_string(),
+        });
+    }
+
+    // Write the index as a tree
+    let tree_id = match index.write_tree() {
+        Ok(id) => id,
+        Err(e) => return Err(format!("Failed to write tree: {}", e)),
+    };
+    let tree = match repo.find_tree(tree_id) {
+        Ok(t) => t,
+        Err(e) => return Err(format!("Failed to find tree: {}", e)),
+    };
+
+    // Get HEAD commit for parent
+    let head = match repo.head() {
+        Ok(h) => h,
+        Err(e) => return Err(format!("Failed to get HEAD: {}", e)),
+    };
+    let parent = match head.peel_to_commit() {
+        Ok(p) => p,
+        Err(e) => return Err(format!("Failed to get parent commit: {}", e)),
+    };
+
+    // Get signature
+    let sig = match repo.signature() {
+        Ok(s) => s,
+        Err(e) => return Err(format!("Failed to get signature: {}", e)),
+    };
+
+    // Use the original commit message
+    let message = commit.message().unwrap_or("Cherry-pick commit");
+
+    // Create the new commit
+    let commit_id = match repo.commit(
+        Some("HEAD"),
+        &sig,
+        &sig,
+        message,
+        &tree,
+        &[&parent],
+    ) {
+        Ok(id) => id,
+        Err(e) => return Err(format!("Failed to create cherry-pick commit: {}", e)),
+    };
+
+    Ok(CherryPickResult {
+        success: true,
+        conflicts: vec![],
+        message: format!("Cherry-pick successful: {}", commit_id),
+    })
+}
 use git2::{Repository, Sort};
 use serde::{Serialize, Deserialize};
 use std::path::Path;
@@ -1886,7 +2137,8 @@ pub fn run() {
             pop_stash,
             drop_stash,
             get_stash_diff,
-            discard_file_changes
+            discard_file_changes,
+            cherry_pick_commit
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
