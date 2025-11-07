@@ -410,17 +410,16 @@ fn get_commits(path: String, limit: Option<usize>) -> Result<Vec<Commit>, String
             .map(|p| p.id().to_string())
             .collect();
 
-        // Get branches pointing to this commit
-        let branches = oid_to_branches
-            .get(&oid)
-            .cloned()
-            .unwrap_or_default();
-
-        // Get tags pointing to this commit
-        let tags = oid_to_tags
-            .get(&oid)
-            .cloned()
-            .unwrap_or_default();
+        // OPTIMIZATION: Only include branches/tags for first 100 commits
+        // Most users only see the recent commits, so no need to include refs for all 10,000
+        let (branches, tags) = if index < 100 {
+            (
+                oid_to_branches.get(&oid).cloned().unwrap_or_default(),
+                oid_to_tags.get(&oid).cloned().unwrap_or_default(),
+            )
+        } else {
+            (vec![], vec![])
+        };
 
         commits.push(Commit {
             hash: oid.to_string(),
