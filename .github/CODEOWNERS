@@ -1,0 +1,35 @@
+﻿# CODEOWNERS - Protect Critical Files
+# These files require explicit approval from project maintainers
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Core project files - require maintainer approval
+/.gitignore @Dancode-188
+/LICENSE @Dancode-188
+/package.json @Dancode-188
+/package-lock.json @Dancode-188
+/README.md @Dancode-188
+
+# Configuration files - require maintainer approval
+/tsconfig.json @Dancode-188
+/vite.config.ts @Dancode-188
+/tailwind.config.js @Dancode-188
+/postcss.config.js @Dancode-188
+
+# Tauri configuration - require maintainer approval
+/src-tauri/tauri.conf.json @Dancode-188
+/src-tauri/Cargo.toml @Dancode-188
+
+# Documentation files - require maintainer approval for major changes
+/CONTRIBUTING.md @Dancode-188
+/CODE_OF_CONDUCT.md @Dancode-188
+/ROADMAP.md @Dancode-188
+/SECURITY.md @Dancode-188
+
+# GitHub configuration - require maintainer approval
+/.github/ @Dancode-188
+
+# Build configuration - require maintainer approval
+/src-tauri/build.rs @Dancode-188
+
+# Everything else can be reviewed by any maintainer
+# * @Dancode-188

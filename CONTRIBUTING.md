@@ -54,6 +54,133 @@ Before you begin, ensure you have:
    - Open a PR with a clear description
    - Link any related issues
 
+## 🎯 Pull Request Guidelines
+
+### Before You Start
+
+**Important:** For new features or major changes, please open an issue first to discuss your ideas. This helps avoid wasted effort and ensures alignment with project goals.
+
+### PR Best Practices
+
+1. **One Feature Per PR** - Keep pull requests focused on a single feature or fix. Don't combine multiple unrelated changes.
+
+2. **Keep It Small** - Smaller PRs are easier to review and merge faster:
+   - Aim for fewer than 10 commits per PR
+   - Try to keep changes under 500 lines of code
+   - Break large features into multiple smaller PRs if possible
+
+3. **Clean Commit History** - 
+   - Squash/rebase commits before submitting
+   - Each commit should have a clear, descriptive message
+   - Follow the commit message format (see below)
+
+4. **Core Files Require Discussion** - Some files are critical to the project and require approval before modification:
+   - `.gitignore` - Controls what Git tracks
+   - `LICENSE` - Legal protections for the project
+   - `package.json` / `package-lock.json` - Dependency management
+   - `README.md` - Main project documentation
+   - Configuration files (tsconfig, vite.config, tailwind.config, etc.)
+   
+   **Never delete or radically change these files without prior discussion in an issue.**
+
+5. **Documentation Updates** - If your change affects user-facing behavior, update relevant documentation.
+
+6. **Test Thoroughly** - 
+   - Test your changes on fresh repositories
+   - Test on large repositories (1000+ commits)
+   - Test keyboard shortcuts if affected
+   - Test in both dark and light themes
+   - Test edge cases
+
+### Commit Message Format
+
+Use conventional commit format:
+
+```
+<type>: <description>
+
+[optional body]
+
+[optional footer]
+```
+
+**Types:**
+- `feat:` New feature
+- `fix:` Bug fix
+- `docs:` Documentation changes
+- `style:` Code style changes (formatting, no logic change)
+- `refactor:` Code restructuring (no behavior change)
+- `perf:` Performance improvements
+- `test:` Adding or updating tests
+- `chore:` Maintenance tasks (dependencies, build config)
+
+**Examples:**
+```
+feat: Add drag-and-drop support for interactive rebase
+
+fix: Prevent crash when repository has no commits
+
+docs: Update installation instructions for Windows
+
+perf: Optimize commit graph rendering for 10k+ commits
+
+refactor: Extract commit list logic into custom hook
+```
+
+### What NOT to Do
+
+❌ **Don't:**
+- Delete `package-lock.json` (breaks reproducibility)
+- Set `.gitignore` to ignore all files (`*`)
+- Remove `LICENSE` file
+- Make 100+ commits in a single PR
+- Combine multiple unrelated features in one PR
+- Modify core project files without discussion
+- Change project structure without discussion
+- Copy/paste code without attribution
+
+✅ **Do:**
+- Open an issue first for major changes
+- Keep PRs focused and small
+- Write clear commit messages
+- Test thoroughly before submitting
+- Update documentation when needed
+- Ask questions if unsure
+
+### PR Review Process
+
+1. **Automated Checks** - CI runs tests and linting
+2. **CODEOWNERS Review** - Critical files require maintainer approval
+3. **Code Review** - Maintainers review your changes
+4. **Discussion** - We may request changes or improvements
+5. **Approval** - Once approved, we'll merge your PR
+6. **Merge** - Your contribution is now part of Graft! 🎉
+
+### Size Guidelines by PR Type
+
+| Type | Recommended Size | Notes |
+|------|------------------|-------|
+| Bug Fix | 1-3 commits, <100 lines | Small, focused fixes |
+| Small Feature | 2-5 commits, <300 lines | New button, minor UI change |
+| Medium Feature | 3-7 commits, <500 lines | New component, command |
+| Large Feature | Discuss first | Break into multiple PRs |
+| Refactoring | 2-5 commits, <400 lines | Keep behavior unchanged |
+| Documentation | 1-2 commits, any size | Docs can be longer |
+
+### Protected Files
+
+The following files are protected by CODEOWNERS and require maintainer approval:
+- `.gitignore`
+- `LICENSE`
+- `package.json` / `package-lock.json`
+- `README.md`
+- All configuration files (`tsconfig.json`, `vite.config.ts`, etc.)
+- Tauri configuration (`tauri.conf.json`, `Cargo.toml`)
+- Documentation files (`CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, etc.)
+- GitHub configuration files (`.github/`)
+
+Changes to these files should be discussed in an issue first.
+
 ## 📋 Code Guidelines
 
 ### TypeScript/React (Frontend)

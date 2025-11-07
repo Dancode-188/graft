@@ -1366,7 +1366,7 @@ dependencies = [
 
 [[package]]
 name = "graft"
-version = "0.8.0"
+version = "1.0.3"
 dependencies = [
  "chrono",
  "git2",
