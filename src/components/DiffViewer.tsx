@@ -107,9 +107,9 @@ export function DiffViewer({ repoPath, commitHash, filePath, fileName }: DiffVie
   const language = getLanguage(fileName);
 
   return (
-    <div className="bg-theme-bg border border-theme-default rounded-lg overflow-hidden">
+    <div className="bg-theme-bg border border-theme-default rounded-lg overflow-hidden" role="region" aria-label={`Diff viewer for ${fileName}`}> 
       {/* Diff Header */}
-      <div className="bg-theme-surface border-b border-theme-default px-4 py-2">
+  <div className="bg-theme-surface border-b border-theme-default px-4 py-2" role="heading" aria-level={2}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-theme-tertiary text-xs font-semibold">DIFF</span>
@@ -124,8 +124,10 @@ export function DiffViewer({ repoPath, commitHash, filePath, fileName }: DiffVie
             </div>
             <button
               onClick={() => setViewMode(viewMode === 'monaco' ? 'basic' : 'monaco')}
-              className="text-xs px-3 py-1 rounded bg-theme-bg hover:bg-theme-surface-hover text-theme-secondary transition-colors font-medium"
+              className="text-xs px-3 py-1 rounded bg-theme-bg hover:bg-theme-surface-hover text-theme-secondary transition-colors font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
               title={viewMode === 'monaco' ? "Switch to basic view" : "Switch to Monaco editor"}
+              aria-label={viewMode === 'monaco' ? "Switch to basic view" : "Switch to Monaco editor"}
+              tabIndex={0}
             >
               {viewMode === 'monaco' ? '📝 Basic' : '✨ Monaco'}
             </button>
@@ -135,7 +137,7 @@ export function DiffViewer({ repoPath, commitHash, filePath, fileName }: DiffVie
 
       {/* Diff Content */}
       {viewMode === 'monaco' ? (
-        <div className="h-[600px]">
+  <div className="h-[600px]" role="region" aria-label="Monaco diff editor">
           <Editor
             height="100%"
             width="100%"
@@ -221,8 +223,8 @@ export function DiffViewer({ repoPath, commitHash, filePath, fileName }: DiffVie
           />
         </div>
       ) : (
-        <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
-          <div className="font-mono text-xs">
+        <div className="overflow-x-auto max-h-[600px] overflow-y-auto" role="region" aria-label="Basic diff view">
+          <div className="font-mono text-xs" role="list" aria-label="Diff lines">
             {lines.map((line, idx) => {
               let bgColor = 'bg-theme-surface';
               let textColor = 'text-theme-secondary';
@@ -254,6 +256,9 @@ export function DiffViewer({ repoPath, commitHash, filePath, fileName }: DiffVie
                 <div
                   key={idx}
                   className={`${bgColor} ${textColor} flex hover:bg-opacity-60 transition-colors`}
+                  role="listitem"
+                  aria-label={`Line ${idx + 1} ${lineMarker === '+' ? 'addition' : lineMarker === '-' ? 'deletion' : ''}`}
+                  tabIndex={0}
                 >
                   <span className="w-8 flex-shrink-0 text-center text-theme-tertiary select-none border-r border-theme-default">
                     {idx + 1}
