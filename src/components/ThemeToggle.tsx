@@ -10,14 +10,16 @@ export function ThemeToggle() {
   const showPreview = previewMode === 'dark' || previewMode === 'light';
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 bg-theme-surface border border-theme-default rounded-lg px-3 py-2 shadow-lg">
-      <span className="text-xs text-theme-tertiary">Theme:</span>
+  <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 bg-theme-surface border border-theme-default rounded-lg px-3 py-2 shadow-lg" role="region" aria-label="Theme switcher">
+  <span className="text-xs text-theme-tertiary" id="theme-toggle-label">Theme:</span>
 
       {/* Quick toggle button */}
       <button
         onClick={toggleTheme}
-        className="p-2 rounded hover:bg-theme-surface-hover transition-colors"
+        className="p-2 rounded hover:bg-theme-surface-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
         title={`Switch to ${theme.mode === 'dark' ? 'light' : 'dark'} theme`}
+        aria-label={`Switch to ${theme.mode === 'dark' ? 'light' : 'dark'} theme`}
+        tabIndex={0}
       >
         {theme.mode === 'dark' ? (
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -32,11 +34,16 @@ export function ThemeToggle() {
 
       {/* Mode selector with preview on hover */}
       <div className="relative">
+        <label htmlFor="theme-mode-select" className="sr-only">Theme mode</label>
         <select
+          id="theme-mode-select"
+          aria-label="Theme mode"
+          aria-labelledby="theme-toggle-label theme-mode-select"
           value={themeMode}
           onChange={(e) => setThemeMode(e.target.value as any)}
-          className="text-xs bg-theme-bg border border-theme-default rounded px-2 py-1 text-theme-secondary focus:outline-none focus:ring-1 focus:ring-emerald-500"
+          className="text-xs bg-theme-bg border border-theme-default rounded px-2 py-1 text-theme-secondary focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
           onMouseLeave={() => setPreviewMode(null)}
+          tabIndex={0}
         >
           <option
             value="dark"
