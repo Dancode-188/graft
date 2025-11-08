@@ -17,6 +17,7 @@
   "scripts": {
     "dev": "vite",
     "test": "vitest",
+    "test:performance": "vitest run src/utils/__tests__/graphLayout.performance.test.ts",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",

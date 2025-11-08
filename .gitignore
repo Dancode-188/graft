@@ -27,8 +27,3 @@ dist-ssr
 # Rust build output
 target/
 src-tauri/target/
-
-# Internal development documentation (not part of the project)
-BRANCH_PROTECTION_SETUP.md
-PR_*_RESPONSE_SUMMARY.md
-*_INTERNAL_NOTES.md
