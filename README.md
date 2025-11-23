@@ -4,6 +4,7 @@
 
 ![Version](https://img.shields.io/badge/version-1.0.3-green)
 ![License](https://img.shields.io/badge/license-MIT-blue)
+![CI](https://github.com/Dancode-188/graft/actions/workflows/ci.yml/badge.svg)
 ![Status](https://img.shields.io/badge/status-Production%20Ready-brightgreen)
 ![GitHub Stars](https://img.shields.io/github/stars/Dancode-188/graft?style=social)
 ![GitHub Forks](https://img.shields.io/github/forks/Dancode-188/graft?style=social)
