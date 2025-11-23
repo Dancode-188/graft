@@ -23,6 +23,12 @@ dist-ssr
 *.sln
 *.sw?
 
+# Debug and temporary files
+debug-*.js
+*.debug.js
+*.debug.ts
+test-*.js
+scratch.*
 
 # Rust build output
 target/
