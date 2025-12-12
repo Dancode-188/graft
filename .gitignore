@@ -33,3 +33,7 @@ scratch.*
 # Rust build output
 target/
 src-tauri/target/
+
+# Coverage reports
+coverage/
+src-tauri/coverage/

@@ -1,5 +1,5 @@
 use git2::{Repository, Sort};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::path::Path;
 
 #[derive(Debug, Serialize)]
@@ -136,14 +136,14 @@ struct RebaseCommit {
     message: String,
     author: String,
     timestamp: i64,
-    action: String,  // "pick", "squash", "fixup", "drop", "reword", "edit"
+    action: String, // "pick", "squash", "fixup", "drop", "reword", "edit"
 }
 
 #[derive(Debug, Deserialize, Clone)]
 struct RebaseInstruction {
     hash: String,
-    action: String,  // "pick", "squash", "fixup", "drop", "reword", "edit"
-    new_message: Option<String>,  // Used for "reword" action
+    action: String,              // "pick", "squash", "fixup", "drop", "reword", "edit"
+    new_message: Option<String>, // Used for "reword" action
 }
 
 #[derive(Debug, Serialize)]
@@ -161,7 +161,7 @@ struct RebaseResult {
     total_commits: usize,
     conflicts: Vec<ConflictFile>,
     message: String,
-    rebase_state: String,  // "completed", "in_progress", "stopped_for_edit", "conflict"
+    rebase_state: String, // "completed", "in_progress", "stopped_for_edit", "conflict"
 }
 
 #[derive(Debug, Serialize)]
@@ -188,12 +188,12 @@ struct ValidationResult {
 
 #[derive(Debug, Serialize, Clone)]
 struct StashEntry {
-    index: usize,           // Stash index (0 = most recent)
-    message: String,        // Stash message
-    branch: String,         // Branch where stash was created
-    timestamp: i64,         // Unix timestamp
-    oid: String,            // Git OID
-    file_count: usize,      // Number of files changed
+    index: usize,      // Stash index (0 = most recent)
+    message: String,   // Stash message
+    branch: String,    // Branch where stash was created
+    timestamp: i64,    // Unix timestamp
+    oid: String,       // Git OID
+    file_count: usize, // Number of files changed
 }
 
 #[derive(Debug, Deserialize)]
@@ -238,7 +238,7 @@ fn open_repository(path: String) -> Result<RepoInfo, String> {
                 head.shorthand().unwrap_or("unknown").to_string()
             } else {
                 // Detached HEAD state
-                let oid = head.target().unwrap_or_else(|| git2::Oid::zero());
+                let oid = head.target().unwrap_or_else(git2::Oid::zero);
                 format!("HEAD (detached at {})", &oid.to_string()[..7])
             }
         }
@@ -264,30 +264,37 @@ fn open_repository(path: String) -> Result<RepoInfo, String> {
 }
 
 #[tauri::command]
-fn get_commits(path: String, offset: Option<usize>, limit: Option<usize>) -> Result<Vec<Commit>, String> {
+fn get_commits(
+    path: String,
+    offset: Option<usize>,
+    limit: Option<usize>,
+) -> Result<Vec<Commit>, String> {
     // Open the repository
-    let repo = Repository::open(&path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let repo = Repository::open(&path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
     // Get the HEAD reference for checking current branch
-    let head_branch = repo.head()
+    let head_branch = repo
+        .head()
         .ok()
         .and_then(|h| h.shorthand().map(|s| s.to_string()));
 
     // Build a map of commit OIDs to branch references
     // OPTIMIZATION: Collect branch OIDs for revwalk at the same time
-    let mut oid_to_branches: std::collections::HashMap<git2::Oid, Vec<BranchRef>> = std::collections::HashMap::new();
+    let mut oid_to_branches: std::collections::HashMap<git2::Oid, Vec<BranchRef>> =
+        std::collections::HashMap::new();
     let mut branch_oids: Vec<git2::Oid> = Vec::new();
 
     // Iterate through all branches ONCE (local and remote)
-    let branches = repo.branches(None)
+    let branches = repo
+        .branches(None)
         .map_err(|e| format!("Failed to iterate branches: {}", e))?;
 
     for branch_result in branches {
-        let (branch, branch_type) = branch_result
-            .map_err(|e| format!("Failed to get branch: {}", e))?;
+        let (branch, branch_type) =
+            branch_result.map_err(|e| format!("Failed to get branch: {}", e))?;
 
-        let branch_name = branch.name()
+        let branch_name = branch
+            .name()
             .map_err(|e| format!("Failed to get branch name: {}", e))?
             .unwrap_or("unknown")
             .to_string();
@@ -297,25 +304,23 @@ fn get_commits(path: String, offset: Option<usize>, limit: Option<usize>) -> Res
         // Get the commit that this branch points to
         let reference = branch.get();
         if let Some(oid) = reference.target() {
-            let is_current = !is_remote && head_branch.as_ref().map_or(false, |hb| hb == &branch_name);
-            
+            let is_current = !is_remote && (head_branch.as_ref() == Some(&branch_name));
+
             // Build branch map
-            oid_to_branches
-                .entry(oid)
-                .or_insert_with(Vec::new)
-                .push(BranchRef {
-                    name: branch_name,
-                    is_remote,
-                    is_current,
-                });
-            
+            oid_to_branches.entry(oid).or_default().push(BranchRef {
+                name: branch_name,
+                is_remote,
+                is_current,
+            });
+
             // Collect OID for revwalk (done in same pass!)
             branch_oids.push(oid);
         }
     }
 
     // Build a map of commit OIDs to tag references
-    let mut oid_to_tags: std::collections::HashMap<git2::Oid, Vec<TagRef>> = std::collections::HashMap::new();
+    let mut oid_to_tags: std::collections::HashMap<git2::Oid, Vec<TagRef>> =
+        std::collections::HashMap::new();
 
     // Iterate through all tags
     if let Ok(tag_names) = repo.tag_names(None) {
@@ -325,48 +330,51 @@ fn get_commits(path: String, offset: Option<usize>, limit: Option<usize>) -> Res
                 if let Some(oid) = reference.target() {
                     // Check if this is an annotated tag
                     let is_annotated = reference.is_tag();
-                    
-                    oid_to_tags
-                        .entry(oid)
-                        .or_insert_with(Vec::new)
-                        .push(TagRef {
-                            name: tag_name.to_string(),
-                            is_annotated,
-                            is_remote: tag_name.contains("remotes/"),
-                        });
+
+                    oid_to_tags.entry(oid).or_default().push(TagRef {
+                        name: tag_name.to_string(),
+                        is_annotated,
+                        is_remote: tag_name.contains("remotes/"),
+                    });
                 }
             }
         }
     }
 
     // Get the HEAD reference
-    let head = repo.head()
+    let head = repo
+        .head()
         .map_err(|e| format!("Failed to get HEAD: {}", e))?;
 
     // Get the commit that HEAD points to
-    let head_commit = head.peel_to_commit()
+    let head_commit = head
+        .peel_to_commit()
         .map_err(|e| format!("Failed to get HEAD commit: {}", e))?;
 
     // Create a revwalk (commit iterator)
-    let mut revwalk = repo.revwalk()
+    let mut revwalk = repo
+        .revwalk()
         .map_err(|e| format!("Failed to create revwalk: {}", e))?;
 
     // Sort commits by time (newest first)
-    revwalk.set_sorting(Sort::TIME)
+    revwalk
+        .set_sorting(Sort::TIME)
         .map_err(|e| format!("Failed to set sorting: {}", e))?;
 
     // Push all branch heads to revwalk (equivalent to git log --all)
     // OPTIMIZATION: Use the OIDs we collected earlier (no second iteration!)
     let mut has_pushed_ref = false;
     for oid in branch_oids {
-        revwalk.push(oid)
+        revwalk
+            .push(oid)
             .map_err(|e| format!("Failed to push branch: {}", e))?;
         has_pushed_ref = true;
     }
 
     // If no branches were found (shouldn't happen), fall back to HEAD
     if !has_pushed_ref {
-        revwalk.push(head_commit.id())
+        revwalk
+            .push(head_commit.id())
             .map_err(|e| format!("Failed to push HEAD: {}", e))?;
     }
 
@@ -381,14 +389,15 @@ fn get_commits(path: String, offset: Option<usize>, limit: Option<usize>) -> Res
         if index < offset {
             continue;
         }
-        
+
         // Stop when we've collected enough commits
         if index >= end_index {
             break;
         }
 
         let oid = oid_result.map_err(|e| format!("Failed to get commit OID: {}", e))?;
-        let commit = repo.find_commit(oid)
+        let commit = repo
+            .find_commit(oid)
             .map_err(|e| format!("Failed to find commit: {}", e))?;
 
         // Convert hash once and reuse
@@ -396,7 +405,8 @@ fn get_commits(path: String, offset: Option<usize>, limit: Option<usize>) -> Res
         let short_hash = hash[..7].to_string();
 
         // Get commit message
-        let message = commit.message()
+        let message = commit
+            .message()
             .unwrap_or("(no message)")
             .trim()
             .to_string();
@@ -408,9 +418,7 @@ fn get_commits(path: String, offset: Option<usize>, limit: Option<usize>) -> Res
         let timestamp = author.when().seconds();
 
         // Get parent hashes
-        let parent_hashes: Vec<String> = commit.parents()
-            .map(|p| p.id().to_string())
-            .collect();
+        let parent_hashes: Vec<String> = commit.parents().map(|p| p.id().to_string()).collect();
 
         // OPTIMIZATION: Only include branches/tags for first 100 commits
         // Most users only see the recent commits, so no need to include refs for all 10,000
@@ -442,26 +450,25 @@ fn get_commits(path: String, offset: Option<usize>, limit: Option<usize>) -> Res
 #[tauri::command]
 fn get_commit_files(path: String, commit_hash: String) -> Result<Vec<FileChange>, String> {
     // Open the repository
-    let repo = Repository::open(&path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let repo = Repository::open(&path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
     // Parse the commit hash
-    let oid = git2::Oid::from_str(&commit_hash)
-        .map_err(|e| format!("Invalid commit hash: {}", e))?;
+    let oid =
+        git2::Oid::from_str(&commit_hash).map_err(|e| format!("Invalid commit hash: {}", e))?;
 
     // Get the commit
-    let commit = repo.find_commit(oid)
+    let commit = repo
+        .find_commit(oid)
         .map_err(|e| format!("Failed to find commit: {}", e))?;
 
     // Get the tree for this commit
-    let commit_tree = commit.tree()
+    let commit_tree = commit
+        .tree()
         .map_err(|e| format!("Failed to get commit tree: {}", e))?;
 
     // Get the parent tree (or empty tree if no parent)
     let parent_tree = if commit.parent_count() > 0 {
-        commit.parent(0)
-            .ok()
-            .and_then(|p| p.tree().ok())
+        commit.parent(0).ok().and_then(|p| p.tree().ok())
     } else {
         None
     };
@@ -481,9 +488,15 @@ fn get_commit_files(path: String, commit_hash: String) -> Result<Vec<FileChange>
 
     diff.foreach(
         &mut |delta, _| {
-            let path = delta.new_file()
+            let path = delta
+                .new_file()
                 .path()
-                .unwrap_or_else(|| delta.old_file().path().unwrap_or(std::path::Path::new("unknown")))
+                .unwrap_or_else(|| {
+                    delta
+                        .old_file()
+                        .path()
+                        .unwrap_or(std::path::Path::new("unknown"))
+                })
                 .to_string_lossy()
                 .to_string();
 
@@ -508,7 +521,8 @@ fn get_commit_files(path: String, commit_hash: String) -> Result<Vec<FileChange>
         None,
         None,
         None,
-    ).map_err(|e| format!("Failed to iterate diff: {}", e))?;
+    )
+    .map_err(|e| format!("Failed to iterate diff: {}", e))?;
 
     Ok(file_changes)
 }
@@ -516,14 +530,14 @@ fn get_commit_files(path: String, commit_hash: String) -> Result<Vec<FileChange>
 #[tauri::command]
 fn get_working_directory_status(path: String) -> Result<WorkingDirectoryStatus, String> {
     // Open the repository
-    let repo = Repository::open(&path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let repo = Repository::open(&path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
     let mut staged = Vec::new();
     let mut unstaged = Vec::new();
 
     // Get the status for each file
-    let statuses = repo.statuses(None)
+    let statuses = repo
+        .statuses(None)
         .map_err(|e| format!("Failed to get repository status: {}", e))?;
 
     for entry in statuses.iter() {
@@ -600,21 +614,23 @@ fn get_working_directory_status(path: String) -> Result<WorkingDirectoryStatus, 
 #[tauri::command]
 fn stage_files(path: String, file_paths: Vec<String>) -> Result<String, String> {
     // Open the repository
-    let repo = Repository::open(&path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let repo = Repository::open(&path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
     // Get the index
-    let mut index = repo.index()
+    let mut index = repo
+        .index()
         .map_err(|e| format!("Failed to get repository index: {}", e))?;
 
     // Add each file to the index
     for file_path in file_paths {
-        index.add_path(std::path::Path::new(&file_path))
+        index
+            .add_path(std::path::Path::new(&file_path))
             .map_err(|e| format!("Failed to stage file {}: {}", file_path, e))?;
     }
 
     // Write the index
-    index.write()
+    index
+        .write()
         .map_err(|e| format!("Failed to write index: {}", e))?;
 
     Ok("Files staged successfully".to_string())
@@ -623,58 +639,67 @@ fn stage_files(path: String, file_paths: Vec<String>) -> Result<String, String> 
 #[tauri::command]
 fn unstage_files(path: String, file_paths: Vec<String>) -> Result<String, String> {
     // Open the repository
-    let repo = Repository::open(&path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let repo = Repository::open(&path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
     // Get HEAD commit
-    let head = repo.head()
+    let head = repo
+        .head()
         .map_err(|e| format!("Failed to get HEAD: {}", e))?;
-    let head_commit = head.peel_to_commit()
+    let head_commit = head
+        .peel_to_commit()
         .map_err(|e| format!("Failed to get HEAD commit: {}", e))?;
-    let head_tree = head_commit.tree()
+    let head_tree = head_commit
+        .tree()
         .map_err(|e| format!("Failed to get HEAD tree: {}", e))?;
 
     // Get the index
-    let mut index = repo.index()
+    let mut index = repo
+        .index()
         .map_err(|e| format!("Failed to get repository index: {}", e))?;
 
     // Reset each file to HEAD
     for file_path in file_paths {
         let tree_entry = head_tree.get_path(std::path::Path::new(&file_path));
-        
+
         if let Ok(entry) = tree_entry {
             // File exists in HEAD, reset to that version using add_frombuffer
-            let obj = entry.to_object(&repo)
+            let obj = entry
+                .to_object(&repo)
                 .map_err(|e| format!("Failed to get object for {}: {}", file_path, e))?;
-            let blob = obj.as_blob()
+            let blob = obj
+                .as_blob()
                 .ok_or_else(|| format!("Object is not a blob: {}", file_path))?;
-            
-            index.add_frombuffer(
-                &git2::IndexEntry {
-                    ctime: git2::IndexTime::new(0, 0),
-                    mtime: git2::IndexTime::new(0, 0),
-                    dev: 0,
-                    ino: 0,
-                    mode: entry.filemode() as u32,
-                    uid: 0,
-                    gid: 0,
-                    file_size: blob.size() as u32,
-                    id: entry.id(),
-                    flags: 0,
-                    flags_extended: 0,
-                    path: file_path.as_bytes().to_vec(),
-                },
-                blob.content()
-            ).map_err(|e| format!("Failed to reset file {}: {}", file_path, e))?;
+
+            index
+                .add_frombuffer(
+                    &git2::IndexEntry {
+                        ctime: git2::IndexTime::new(0, 0),
+                        mtime: git2::IndexTime::new(0, 0),
+                        dev: 0,
+                        ino: 0,
+                        mode: entry.filemode() as u32,
+                        uid: 0,
+                        gid: 0,
+                        file_size: blob.size() as u32,
+                        id: entry.id(),
+                        flags: 0,
+                        flags_extended: 0,
+                        path: file_path.as_bytes().to_vec(),
+                    },
+                    blob.content(),
+                )
+                .map_err(|e| format!("Failed to reset file {}: {}", file_path, e))?;
         } else {
             // File doesn't exist in HEAD (new file), remove from index
-            index.remove_path(std::path::Path::new(&file_path))
+            index
+                .remove_path(std::path::Path::new(&file_path))
                 .map_err(|e| format!("Failed to unstage file {}: {}", file_path, e))?;
         }
     }
 
     // Write the index
-    index.write()
+    index
+        .write()
         .map_err(|e| format!("Failed to write index: {}", e))?;
 
     Ok("Files unstaged successfully".to_string())
@@ -688,36 +713,43 @@ fn create_commit(path: String, message: String) -> Result<CommitResult, String> 
     }
 
     // Open the repository
-    let repo = Repository::open(&path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let repo = Repository::open(&path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
     // Get the signature (author)
-    let signature = repo.signature()
+    let signature = repo
+        .signature()
         .map_err(|e| format!("Failed to get signature: {}", e))?;
 
     // Get the current HEAD
-    let head = repo.head()
+    let head = repo
+        .head()
         .map_err(|e| format!("Failed to get HEAD: {}", e))?;
-    let parent_commit = head.peel_to_commit()
+    let parent_commit = head
+        .peel_to_commit()
         .map_err(|e| format!("Failed to get parent commit: {}", e))?;
 
     // Get the index and write it as a tree
-    let mut index = repo.index()
+    let mut index = repo
+        .index()
         .map_err(|e| format!("Failed to get index: {}", e))?;
-    let tree_id = index.write_tree()
+    let tree_id = index
+        .write_tree()
         .map_err(|e| format!("Failed to write tree: {}", e))?;
-    let tree = repo.find_tree(tree_id)
+    let tree = repo
+        .find_tree(tree_id)
         .map_err(|e| format!("Failed to find tree: {}", e))?;
 
     // Create the commit
-    let commit_id = repo.commit(
-        Some("HEAD"),
-        &signature,
-        &signature,
-        &message,
-        &tree,
-        &[&parent_commit],
-    ).map_err(|e| format!("Failed to create commit: {}", e))?;
+    let commit_id = repo
+        .commit(
+            Some("HEAD"),
+            &signature,
+            &signature,
+            &message,
+            &tree,
+            &[&parent_commit],
+        )
+        .map_err(|e| format!("Failed to create commit: {}", e))?;
 
     Ok(CommitResult {
         success: true,
@@ -729,26 +761,25 @@ fn create_commit(path: String, message: String) -> Result<CommitResult, String> 
 #[tauri::command]
 fn get_file_diff(path: String, commit_hash: String, file_path: String) -> Result<String, String> {
     // Open the repository
-    let repo = Repository::open(&path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let repo = Repository::open(&path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
     // Parse the commit hash
-    let oid = git2::Oid::from_str(&commit_hash)
-        .map_err(|e| format!("Invalid commit hash: {}", e))?;
+    let oid =
+        git2::Oid::from_str(&commit_hash).map_err(|e| format!("Invalid commit hash: {}", e))?;
 
     // Get the commit
-    let commit = repo.find_commit(oid)
+    let commit = repo
+        .find_commit(oid)
         .map_err(|e| format!("Failed to find commit: {}", e))?;
 
     // Get the commit tree
-    let commit_tree = commit.tree()
+    let commit_tree = commit
+        .tree()
         .map_err(|e| format!("Failed to get commit tree: {}", e))?;
 
     // Get the parent tree (or None if no parent)
     let parent_tree = if commit.parent_count() > 0 {
-        commit.parent(0)
-            .ok()
-            .and_then(|p| p.tree().ok())
+        commit.parent(0).ok().and_then(|p| p.tree().ok())
     } else {
         None
     };
@@ -774,13 +805,14 @@ fn get_file_diff(path: String, commit_hash: String, file_path: String) -> Result
         let content = std::str::from_utf8(line.content()).unwrap_or("");
 
         // Check if this line belongs to our file
-        let delta_path = delta.new_file()
+        let delta_path = delta
+            .new_file()
             .path()
             .unwrap_or_else(|| delta.old_file().path().unwrap_or(std::path::Path::new("")));
-        
+
         if delta_path == file_path_std {
             file_found = true;
-            
+
             // Add the line with its origin marker
             match origin {
                 '+' | '-' | ' ' => {
@@ -803,7 +835,8 @@ fn get_file_diff(path: String, commit_hash: String, file_path: String) -> Result
         }
 
         true
-    }).map_err(|e| format!("Failed to print diff: {}", e))?;
+    })
+    .map_err(|e| format!("Failed to print diff: {}", e))?;
 
     if !file_found {
         return Err(format!("File not found in commit: {}", file_path));
@@ -820,27 +853,30 @@ fn get_file_content(
     file_path: String,
 ) -> Result<String, String> {
     // Open the repository
-    let repo = Repository::open(&path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let repo = Repository::open(&path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
     // Parse the commit hash
-    let oid = git2::Oid::from_str(&commit_hash)
-        .map_err(|e| format!("Invalid commit hash: {}", e))?;
+    let oid =
+        git2::Oid::from_str(&commit_hash).map_err(|e| format!("Invalid commit hash: {}", e))?;
 
     // Get the commit
-    let commit = repo.find_commit(oid)
+    let commit = repo
+        .find_commit(oid)
         .map_err(|e| format!("Failed to find commit: {}", e))?;
 
     // Get the tree for this commit
-    let tree = commit.tree()
+    let tree = commit
+        .tree()
         .map_err(|e| format!("Failed to get commit tree: {}", e))?;
 
     // Find the file in the tree
-    let tree_entry = tree.get_path(std::path::Path::new(&file_path))
+    let tree_entry = tree
+        .get_path(std::path::Path::new(&file_path))
         .map_err(|e| format!("File not found in commit: {}", e))?;
 
     // Get the blob (file content)
-    let blob = repo.find_blob(tree_entry.id())
+    let blob = repo
+        .find_blob(tree_entry.id())
         .map_err(|e| format!("Failed to read file content: {}", e))?;
 
     // Convert blob content to string
@@ -867,8 +903,7 @@ struct Branch {
 #[tauri::command]
 fn get_branches(path: String) -> Result<Vec<Branch>, String> {
     // Open the repository
-    let repo = Repository::open(&path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let repo = Repository::open(&path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
     let mut branches = Vec::new();
 
@@ -880,36 +915,38 @@ fn get_branches(path: String) -> Result<Vec<Branch>, String> {
         .map(|s| s.to_string());
 
     // Iterate through all branches (local and remote)
-    let branch_iter = repo.branches(None)
+    let branch_iter = repo
+        .branches(None)
         .map_err(|e| format!("Failed to iterate branches: {}", e))?;
 
     for branch_result in branch_iter {
-        let (branch, branch_type) = branch_result
-            .map_err(|e| format!("Failed to get branch: {}", e))?;
+        let (branch, branch_type) =
+            branch_result.map_err(|e| format!("Failed to get branch: {}", e))?;
 
         // Get branch name
-        let name = branch.name()
+        let name = branch
+            .name()
             .map_err(|e| format!("Failed to get branch name: {}", e))?
             .unwrap_or("unknown")
             .to_string();
 
         let is_remote = branch_type == git2::BranchType::Remote;
-        
+
         // Determine if this is the current branch
-        let is_current = !is_remote && current_branch_name.as_ref().map_or(false, |cb| cb == &name);
+        let is_current = !is_remote && (current_branch_name.as_ref() == Some(&name));
 
         // Get the full reference name
         let reference = branch.get();
-        let full_name = reference.name()
-            .unwrap_or("unknown")
-            .to_string();
+        let full_name = reference.name().unwrap_or("unknown").to_string();
 
         // Get the commit this branch points to
-        let commit = reference.peel_to_commit()
+        let commit = reference
+            .peel_to_commit()
             .map_err(|e| format!("Failed to get commit for branch {}: {}", name, e))?;
 
         let commit_hash = commit.id().to_string();
-        let commit_message = commit.message()
+        let commit_message = commit
+            .message()
             .unwrap_or("(no message)")
             .lines()
             .next()
@@ -919,14 +956,9 @@ fn get_branches(path: String) -> Result<Vec<Branch>, String> {
 
         // Get upstream tracking info (for local branches)
         let upstream = if !is_remote {
-            branch.upstream()
-                .ok()
-                .and_then(|upstream_branch| {
-                    upstream_branch.name()
-                        .ok()
-                        .flatten()
-                        .map(|s| s.to_string())
-                })
+            branch.upstream().ok().and_then(|upstream_branch| {
+                upstream_branch.name().ok().flatten().map(|s| s.to_string())
+            })
         } else {
             None
         };
@@ -976,24 +1008,28 @@ fn create_branch(
     }
 
     // Open the repository
-    let repo = Repository::open(&path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let repo = Repository::open(&path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
     // Check if branch already exists
-    if repo.find_branch(&branch_name, git2::BranchType::Local).is_ok() {
+    if repo
+        .find_branch(&branch_name, git2::BranchType::Local)
+        .is_ok()
+    {
         return Err(format!("Branch '{}' already exists", branch_name));
     }
 
     // Determine the starting commit
     let commit = if let Some(start) = start_point {
         // Try to parse as commit hash or resolve as reference
-        let obj = repo.revparse_single(&start)
+        let obj = repo
+            .revparse_single(&start)
             .map_err(|e| format!("Failed to resolve start point '{}': {}", start, e))?;
         obj.peel_to_commit()
             .map_err(|e| format!("Start point '{}' is not a valid commit: {}", start, e))?
     } else {
         // Use HEAD
-        let head = repo.head()
+        let head = repo
+            .head()
             .map_err(|e| format!("Failed to get HEAD: {}", e))?;
         head.peel_to_commit()
             .map_err(|e| format!("Failed to get HEAD commit: {}", e))?
@@ -1005,12 +1041,13 @@ fn create_branch(
 
     // Checkout if requested
     if checkout {
-        let obj = repo.revparse_single(&format!("refs/heads/{}", branch_name))
+        let obj = repo
+            .revparse_single(&format!("refs/heads/{}", branch_name))
             .map_err(|e| format!("Failed to find new branch: {}", e))?;
-        
+
         repo.checkout_tree(&obj, None)
             .map_err(|e| format!("Failed to checkout branch: {}", e))?;
-        
+
         repo.set_head(&format!("refs/heads/{}", branch_name))
             .map_err(|e| format!("Failed to set HEAD: {}", e))?;
     }
@@ -1022,30 +1059,39 @@ fn create_branch(
 #[tauri::command]
 fn switch_branch(path: String, branch_name: String) -> Result<String, String> {
     // Open the repository
-    let repo = Repository::open(&path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let repo = Repository::open(&path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
     // Check for uncommitted changes
-    let statuses = repo.statuses(None)
+    let statuses = repo
+        .statuses(None)
         .map_err(|e| format!("Failed to get repository status: {}", e))?;
-    
+
     let has_changes = statuses.iter().any(|s| {
         let status = s.status();
-        status.is_index_new() || status.is_index_modified() || status.is_index_deleted() ||
-        status.is_wt_new() || status.is_wt_modified() || status.is_wt_deleted()
+        status.is_index_new()
+            || status.is_index_modified()
+            || status.is_index_deleted()
+            || status.is_wt_new()
+            || status.is_wt_modified()
+            || status.is_wt_deleted()
     });
 
     if has_changes {
-        return Err("You have uncommitted changes. Please commit or stash them before switching branches.".to_string());
+        return Err(
+            "You have uncommitted changes. Please commit or stash them before switching branches."
+                .to_string(),
+        );
     }
 
     // Find the branch
-    let branch = repo.find_branch(&branch_name, git2::BranchType::Local)
+    let branch = repo
+        .find_branch(&branch_name, git2::BranchType::Local)
         .map_err(|e| format!("Branch '{}' not found: {}", branch_name, e))?;
 
     // Get the reference
     let reference = branch.get();
-    let obj = reference.peel(git2::ObjectType::Commit)
+    let obj = reference
+        .peel(git2::ObjectType::Commit)
         .map_err(|e| format!("Failed to get commit: {}", e))?;
 
     // Checkout the branch
@@ -1063,8 +1109,7 @@ fn switch_branch(path: String, branch_name: String) -> Result<String, String> {
 #[tauri::command]
 fn delete_branch(path: String, branch_name: String, force: bool) -> Result<String, String> {
     // Open the repository
-    let repo = Repository::open(&path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let repo = Repository::open(&path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
     // Check if trying to delete current branch
     let head_ref = repo.head().ok();
@@ -1073,27 +1118,33 @@ fn delete_branch(path: String, branch_name: String, force: bool) -> Result<Strin
         .and_then(|h| h.shorthand())
         .map(|s| s.to_string());
 
-    if current_branch.as_ref().map_or(false, |cb| cb == &branch_name) {
-        return Err("Cannot delete the current branch. Please switch to another branch first.".to_string());
+    if current_branch.as_ref() == Some(&branch_name) {
+        return Err(
+            "Cannot delete the current branch. Please switch to another branch first.".to_string(),
+        );
     }
 
     // Find the branch
-    let mut branch = repo.find_branch(&branch_name, git2::BranchType::Local)
+    let mut branch = repo
+        .find_branch(&branch_name, git2::BranchType::Local)
         .map_err(|e| format!("Branch '{}' not found: {}", branch_name, e))?;
 
     // Check if branch is merged (unless force is true)
     if !force {
-        let branch_commit = branch.get()
+        let branch_commit = branch
+            .get()
             .peel_to_commit()
             .map_err(|e| format!("Failed to get branch commit: {}", e))?;
-        
-        let head_commit = repo.head()
+
+        let head_commit = repo
+            .head()
             .map_err(|e| format!("Failed to get HEAD: {}", e))?
             .peel_to_commit()
             .map_err(|e| format!("Failed to get HEAD commit: {}", e))?;
 
         // Check if branch_commit is reachable from head_commit
-        let is_merged = repo.graph_descendant_of(head_commit.id(), branch_commit.id())
+        let is_merged = repo
+            .graph_descendant_of(head_commit.id(), branch_commit.id())
             .map_err(|e| format!("Failed to check if branch is merged: {}", e))?;
 
         if !is_merged {
@@ -1105,7 +1156,8 @@ fn delete_branch(path: String, branch_name: String, force: bool) -> Result<Strin
     }
 
     // Delete the branch
-    branch.delete()
+    branch
+        .delete()
         .map_err(|e| format!("Failed to delete branch: {}", e))?;
 
     Ok(format!("Branch '{}' deleted successfully", branch_name))
@@ -1125,8 +1177,7 @@ fn rename_branch(path: String, old_name: String, new_name: String) -> Result<Str
     }
 
     // Open the repository
-    let repo = Repository::open(&path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let repo = Repository::open(&path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
     // Check if new name already exists
     if repo.find_branch(&new_name, git2::BranchType::Local).is_ok() {
@@ -1134,11 +1185,13 @@ fn rename_branch(path: String, old_name: String, new_name: String) -> Result<Str
     }
 
     // Find the branch to rename
-    let mut branch = repo.find_branch(&old_name, git2::BranchType::Local)
+    let mut branch = repo
+        .find_branch(&old_name, git2::BranchType::Local)
         .map_err(|e| format!("Branch '{}' not found: {}", old_name, e))?;
 
     // Rename the branch
-    branch.rename(&new_name, false)
+    branch
+        .rename(&new_name, false)
         .map_err(|e| format!("Failed to rename branch: {}", e))?;
 
     Ok(format!("Branch '{}' renamed to '{}'", old_name, new_name))
@@ -1147,11 +1200,11 @@ fn rename_branch(path: String, old_name: String, new_name: String) -> Result<Str
 #[tauri::command]
 fn get_remote_status(path: String, branch_name: String) -> Result<RemoteStatus, String> {
     // Open the repository
-    let repo = Repository::open(&path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let repo = Repository::open(&path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
     // Get the branch
-    let branch = repo.find_branch(&branch_name, git2::BranchType::Local)
+    let branch = repo
+        .find_branch(&branch_name, git2::BranchType::Local)
         .map_err(|e| format!("Branch '{}' not found: {}", branch_name, e))?;
 
     // Get the upstream branch
@@ -1171,10 +1224,11 @@ fn get_remote_status(path: String, branch_name: String) -> Result<RemoteStatus, 
     };
 
     // Get remote name and URL
-    let upstream_name = upstream.name()
+    let upstream_name = upstream
+        .name()
         .map_err(|_| "Invalid upstream branch name")?
         .ok_or("Upstream branch name is not valid UTF-8")?;
-    
+
     // Parse remote name from upstream (e.g., "origin/main" -> "origin")
     let remote_name = upstream_name
         .split('/')
@@ -1183,22 +1237,29 @@ fn get_remote_status(path: String, branch_name: String) -> Result<RemoteStatus, 
         .to_string();
 
     // Get remote URL
-    let remote = repo.find_remote(&remote_name)
+    let remote = repo
+        .find_remote(&remote_name)
         .map_err(|e| format!("Failed to find remote '{}': {}", remote_name, e))?;
-    
-    let remote_url = remote.url()
+
+    let remote_url = remote
+        .url()
         .ok_or("Remote URL is not valid UTF-8")?
         .to_string();
 
     // Get local and remote commit OIDs
-    let local_oid = branch.get().target()
+    let local_oid = branch
+        .get()
+        .target()
         .ok_or("Failed to get local branch target")?;
-    
-    let upstream_oid = upstream.get().target()
+
+    let upstream_oid = upstream
+        .get()
+        .target()
         .ok_or("Failed to get upstream branch target")?;
 
     // Calculate ahead/behind counts
-    let (ahead, behind) = repo.graph_ahead_behind(local_oid, upstream_oid)
+    let (ahead, behind) = repo
+        .graph_ahead_behind(local_oid, upstream_oid)
         .map_err(|e| format!("Failed to calculate ahead/behind: {}", e))?;
 
     let up_to_date = ahead == 0 && behind == 0;
@@ -1219,11 +1280,11 @@ fn fetch_from_remote(path: String, remote_name: String) -> Result<FetchResult, S
     use std::sync::{Arc, Mutex};
 
     // Open the repository
-    let repo = Repository::open(&path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let repo = Repository::open(&path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
     // Find the remote
-    let mut remote = repo.find_remote(&remote_name)
+    let mut remote = repo
+        .find_remote(&remote_name)
         .map_err(|e| format!("Remote '{}' not found: {}", remote_name, e))?;
 
     // Track progress
@@ -1241,7 +1302,7 @@ fn fetch_from_remote(path: String, remote_name: String) -> Result<FetchResult, S
 
     // Set up callbacks
     let mut callbacks = RemoteCallbacks::new();
-    
+
     callbacks.transfer_progress(move |stats| {
         *total_objects_clone.lock().unwrap() = stats.total_objects() as u32;
         *received_objects_clone.lock().unwrap() = stats.received_objects() as u32;
@@ -1254,12 +1315,12 @@ fn fetch_from_remote(path: String, remote_name: String) -> Result<FetchResult, S
     // Credentials callback - handle both SSH and HTTPS
     callbacks.credentials(|url, username_from_url, allowed_types| {
         use git2::CredentialType;
-        
+
         // Try SSH key for SSH URLs
         if allowed_types.contains(CredentialType::SSH_KEY) {
             return git2::Cred::ssh_key_from_agent(username_from_url.unwrap_or("git"));
         }
-        
+
         // Try credential helper for HTTPS URLs (uses Git Credential Manager)
         if allowed_types.contains(CredentialType::USER_PASS_PLAINTEXT) {
             // Try Git's credential helper which will use Windows Credential Manager
@@ -1269,7 +1330,7 @@ fn fetch_from_remote(path: String, remote_name: String) -> Result<FetchResult, S
                 }
             }
         }
-        
+
         // Fallback error
         Err(git2::Error::from_str("No suitable authentication method found. Please ensure Git Credential Manager is set up."))
     });
@@ -1279,7 +1340,12 @@ fn fetch_from_remote(path: String, remote_name: String) -> Result<FetchResult, S
     fetch_options.remote_callbacks(callbacks);
 
     // Fetch all refs (connection happens automatically)
-    remote.fetch(&["refs/heads/*:refs/remotes/origin/*"], Some(&mut fetch_options), None)
+    remote
+        .fetch(
+            &["refs/heads/*:refs/remotes/origin/*"],
+            Some(&mut fetch_options),
+            None,
+        )
         .map_err(|e| format!("Failed to fetch from remote: {}", e))?;
 
     // Get final stats
@@ -1303,30 +1369,36 @@ fn pull_from_remote(
     use git2::{FetchOptions, RemoteCallbacks};
 
     // Open the repository
-    let repo = Repository::open(&path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let repo = Repository::open(&path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
     // Check if working directory is clean
-    let statuses = repo.statuses(None)
+    let statuses = repo
+        .statuses(None)
         .map_err(|e| format!("Failed to get repository status: {}", e))?;
-    
+
     let has_changes = statuses.iter().any(|s| {
         let status = s.status();
         status.is_wt_modified() || status.is_wt_new() || status.is_wt_deleted()
     });
-    
+
     if has_changes {
-        return Err("Working directory has uncommitted changes. Commit or stash them before pulling.".to_string());
+        return Err(
+            "Working directory has uncommitted changes. Commit or stash them before pulling."
+                .to_string(),
+        );
     }
 
     // Get current branch
-    let head = repo.head()
+    let head = repo
+        .head()
         .map_err(|e| format!("Failed to get HEAD: {}", e))?;
-    let branch_name = head.shorthand()
+    let branch_name = head
+        .shorthand()
         .ok_or_else(|| "Failed to get branch name".to_string())?;
 
     // Find the remote
-    let mut remote = repo.find_remote(&remote_name)
+    let mut remote = repo
+        .find_remote(&remote_name)
         .map_err(|e| format!("Remote '{}' not found: {}", remote_name, e))?;
 
     // Set up callbacks for authentication
@@ -1340,21 +1412,26 @@ fn pull_from_remote(
     fetch_options.remote_callbacks(callbacks);
 
     // Fetch from remote
-    remote.fetch(&[branch_name], Some(&mut fetch_options), None)
+    remote
+        .fetch(&[branch_name], Some(&mut fetch_options), None)
         .map_err(|e| format!("Failed to fetch from remote: {}", e))?;
 
     // Get the fetch head
-    let fetch_head = repo.find_reference("FETCH_HEAD")
+    let fetch_head = repo
+        .find_reference("FETCH_HEAD")
         .map_err(|e| format!("Failed to find FETCH_HEAD: {}", e))?;
-    let fetch_commit = repo.reference_to_annotated_commit(&fetch_head)
+    let fetch_commit = repo
+        .reference_to_annotated_commit(&fetch_head)
         .map_err(|e| format!("Failed to get fetch commit: {}", e))?;
 
     // Get HEAD commit
-    let head_commit = repo.reference_to_annotated_commit(&head)
+    let head_commit = repo
+        .reference_to_annotated_commit(&head)
         .map_err(|e| format!("Failed to get HEAD commit: {}", e))?;
 
     // Perform merge analysis
-    let (merge_analysis, _merge_pref) = repo.merge_analysis(&[&fetch_commit])
+    let (merge_analysis, _merge_pref) = repo
+        .merge_analysis(&[&fetch_commit])
         .map_err(|e| format!("Failed to analyze merge: {}", e))?;
 
     if merge_analysis.is_up_to_date() {
@@ -1369,15 +1446,17 @@ fn pull_from_remote(
     if merge_analysis.is_fast_forward() {
         // Fast-forward merge
         let refname = format!("refs/heads/{}", branch_name);
-        let mut reference = repo.find_reference(&refname)
+        let mut reference = repo
+            .find_reference(&refname)
             .map_err(|e| format!("Failed to find branch reference: {}", e))?;
-        
-        reference.set_target(fetch_commit.id(), "Fast-forward merge")
+
+        reference
+            .set_target(fetch_commit.id(), "Fast-forward merge")
             .map_err(|e| format!("Failed to fast-forward: {}", e))?;
-        
+
         repo.set_head(&refname)
             .map_err(|e| format!("Failed to set HEAD: {}", e))?;
-        
+
         repo.checkout_head(Some(git2::build::CheckoutBuilder::default().force()))
             .map_err(|e| format!("Failed to checkout: {}", e))?;
 
@@ -1391,12 +1470,8 @@ fn pull_from_remote(
 
     // Normal merge or rebase required
     match strategy {
-        PullStrategy::Merge => {
-            perform_merge(&repo, &fetch_commit, branch_name)
-        }
-        PullStrategy::Rebase => {
-            perform_rebase(&repo, &fetch_commit, &head_commit)
-        }
+        PullStrategy::Merge => perform_merge(&repo, &fetch_commit, branch_name),
+        PullStrategy::Rebase => perform_rebase(&repo, &fetch_commit, &head_commit),
     }
 }
 
@@ -1413,9 +1488,10 @@ fn perform_merge(
         .map_err(|e| format!("Merge failed: {}", e))?;
 
     // Check for conflicts
-    let mut index = repo.index()
+    let mut index = repo
+        .index()
         .map_err(|e| format!("Failed to get index: {}", e))?;
-    
+
     if index.has_conflicts() {
         let conflicts = collect_conflicts(&index)?;
         let conflict_count = conflicts.len();
@@ -1423,24 +1499,32 @@ fn perform_merge(
             success: false,
             conflicts,
             commits_received: 0,
-            message: format!("Merge has {} conflict(s). Please resolve them manually.", conflict_count),
+            message: format!(
+                "Merge has {} conflict(s). Please resolve them manually.",
+                conflict_count
+            ),
         });
     }
 
     // Write the merge commit
-    let signature = repo.signature()
+    let signature = repo
+        .signature()
         .map_err(|e| format!("Failed to get signature: {}", e))?;
-    
-    let parent_commit = repo.head()
+
+    let parent_commit = repo
+        .head()
         .and_then(|h| h.peel_to_commit())
         .map_err(|e| format!("Failed to get parent commit: {}", e))?;
-    
-    let fetch_parent = repo.find_commit(fetch_commit.id())
+
+    let fetch_parent = repo
+        .find_commit(fetch_commit.id())
         .map_err(|e| format!("Failed to find fetch commit: {}", e))?;
-    
-    let tree_id = index.write_tree()
+
+    let tree_id = index
+        .write_tree()
         .map_err(|e| format!("Failed to write tree: {}", e))?;
-    let tree = repo.find_tree(tree_id)
+    let tree = repo
+        .find_tree(tree_id)
         .map_err(|e| format!("Failed to find tree: {}", e))?;
 
     let message = format!("Merge branch '{}' of remote", branch_name);
@@ -1451,7 +1535,8 @@ fn perform_merge(
         &message,
         &tree,
         &[&parent_commit, &fetch_parent],
-    ).map_err(|e| format!("Failed to create merge commit: {}", e))?;
+    )
+    .map_err(|e| format!("Failed to create merge commit: {}", e))?;
 
     // Clean up merge state
     repo.cleanup_state()
@@ -1473,20 +1558,23 @@ fn perform_rebase(
     use git2::RebaseOptions;
 
     // Get the signature for rebase commits
-    let signature = repo.signature()
+    let signature = repo
+        .signature()
         .map_err(|e| format!("Failed to get signature: {}", e))?;
 
     // Initialize rebase options
     let mut rebase_options = RebaseOptions::new();
-    
+
     // Initialize the rebase operation
     // Parameters: branch (None = HEAD), upstream, onto
-    let mut rebase = repo.rebase(
-        None,               // Rebase current HEAD
-        Some(fetch_commit), // Onto the fetched commit
-        None,               // No custom onto
-        Some(&mut rebase_options)
-    ).map_err(|e| format!("Failed to initialize rebase: {}", e))?;
+    let mut rebase = repo
+        .rebase(
+            None,               // Rebase current HEAD
+            Some(fetch_commit), // Onto the fetched commit
+            None,               // No custom onto
+            Some(&mut rebase_options),
+        )
+        .map_err(|e| format!("Failed to initialize rebase: {}", e))?;
 
     // Track the number of commits applied
     let mut commits_applied = 0;
@@ -1495,7 +1583,7 @@ fn perform_rebase(
     while let Some(op) = rebase.next() {
         // Get the operation (this advances the iterator)
         let _op = op.map_err(|e| format!("Failed to get rebase operation: {}", e))?;
-        
+
         // Try to apply this commit
         match rebase.commit(None, &signature, None) {
             Ok(_) => {
@@ -1503,18 +1591,20 @@ fn perform_rebase(
             }
             Err(e) => {
                 // Check if we have conflicts
-                let index = repo.index()
+                let index = repo
+                    .index()
                     .map_err(|e| format!("Failed to get index: {}", e))?;
-                
+
                 if index.has_conflicts() {
                     // Collect conflict information
                     let conflicts = collect_conflicts(&index)?;
                     let conflict_count = conflicts.len(); // Get count before moving
-                    
+
                     // Abort the rebase to leave the repository in a clean state
-                    rebase.abort()
+                    rebase
+                        .abort()
                         .map_err(|e| format!("Failed to abort rebase after conflict: {}", e))?;
-                    
+
                     return Ok(PullResult {
                         success: false,
                         conflicts,
@@ -1526,7 +1616,8 @@ fn perform_rebase(
                     });
                 } else {
                     // Some other error occurred
-                    rebase.abort()
+                    rebase
+                        .abort()
                         .map_err(|e| format!("Failed to abort rebase: {}", e))?;
                     return Err(format!("Failed to apply commit during rebase: {}", e));
                 }
@@ -1535,27 +1626,31 @@ fn perform_rebase(
     }
 
     // Finish the rebase
-    rebase.finish(None)
+    rebase
+        .finish(None)
         .map_err(|e| format!("Failed to finish rebase: {}", e))?;
 
     Ok(PullResult {
         success: true,
         conflicts: vec![],
         commits_received: commits_applied,
-        message: format!("Rebase completed successfully ({} commits applied)", commits_applied),
+        message: format!(
+            "Rebase completed successfully ({} commits applied)",
+            commits_applied
+        ),
     })
 }
 
 fn collect_conflicts(index: &git2::Index) -> Result<Vec<ConflictFile>, String> {
     let mut conflicts = Vec::new();
-    
-    let conflicts_iter = index.conflicts()
+
+    let conflicts_iter = index
+        .conflicts()
         .map_err(|e| format!("Failed to get conflicts: {}", e))?;
-    
+
     for conflict in conflicts_iter {
-        let conflict = conflict
-            .map_err(|e| format!("Failed to read conflict: {}", e))?;
-        
+        let conflict = conflict.map_err(|e| format!("Failed to read conflict: {}", e))?;
+
         // Determine conflict type first (before moving values)
         let conflict_type = if conflict.our.is_some() && conflict.their.is_some() {
             "content".to_string()
@@ -1566,7 +1661,7 @@ fn collect_conflicts(index: &git2::Index) -> Result<Vec<ConflictFile>, String> {
         } else {
             "unknown".to_string()
         };
-        
+
         // Now extract the path (moving values is fine here)
         let path = if let Some(ours) = conflict.our {
             String::from_utf8_lossy(&ours.path).to_string()
@@ -1583,7 +1678,7 @@ fn collect_conflicts(index: &git2::Index) -> Result<Vec<ConflictFile>, String> {
             conflict_type,
         });
     }
-    
+
     Ok(conflicts)
 }
 
@@ -1599,32 +1694,32 @@ fn push_to_remote(
     use std::sync::{Arc, Mutex};
 
     // Open the repository
-    let repo = Repository::open(&path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let repo = Repository::open(&path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
     // Find the remote
-    let mut remote = repo.find_remote(&remote_name)
+    let mut remote = repo
+        .find_remote(&remote_name)
         .map_err(|e| format!("Remote '{}' not found: {}", remote_name, e))?;
 
     // Track if push was rejected
     let was_rejected = Arc::new(Mutex::new(false));
     let rejection_reason = Arc::new(Mutex::new(String::new()));
-    
+
     let was_rejected_clone = Arc::clone(&was_rejected);
     let rejection_reason_clone = Arc::clone(&rejection_reason);
 
     // Set up callbacks
     let mut callbacks = RemoteCallbacks::new();
-    
+
     // Credentials callback - handle both SSH and HTTPS
     callbacks.credentials(|url, username_from_url, allowed_types| {
         use git2::CredentialType;
-        
+
         // Try SSH key for SSH URLs
         if allowed_types.contains(CredentialType::SSH_KEY) {
             return git2::Cred::ssh_key_from_agent(username_from_url.unwrap_or("git"));
         }
-        
+
         // Try credential helper for HTTPS URLs (uses Git Credential Manager)
         if allowed_types.contains(CredentialType::USER_PASS_PLAINTEXT) {
             // Try Git's credential helper which will use Windows Credential Manager
@@ -1634,7 +1729,7 @@ fn push_to_remote(
                 }
             }
         }
-        
+
         // Fallback error
         Err(git2::Error::from_str("No suitable authentication method found. Please ensure Git Credential Manager is set up."))
     });
@@ -1672,7 +1767,7 @@ fn push_to_remote(
         Ok(_) => {
             let rejected = *was_rejected.lock().unwrap();
             let reason = rejection_reason.lock().unwrap().clone();
-            
+
             if rejected {
                 Ok(PushResult {
                     success: false,
@@ -1700,7 +1795,9 @@ fn push_to_remote(
                     rejected: true,
                     rejection_reason: error_msg.clone(),
                     bytes_sent: 0,
-                    message: "Push rejected: Remote has newer commits. Pull first or use force push.".to_string(),
+                    message:
+                        "Push rejected: Remote has newer commits. Pull first or use force push."
+                            .to_string(),
                 })
             } else {
                 Err(format!("Push failed: {}", error_msg))
@@ -1716,32 +1813,32 @@ fn push_to_remote(
 /// Get the list of commits that would be included in an interactive rebase
 /// from the current HEAD back to (and excluding) the base_commit
 #[tauri::command]
-fn get_rebase_commits(
-    path: String,
-    base_commit: String,
-) -> Result<Vec<RebaseCommit>, String> {
+fn get_rebase_commits(path: String, base_commit: String) -> Result<Vec<RebaseCommit>, String> {
     // Open the repository
-    let repo = Repository::open(&path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let repo = Repository::open(&path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
     // Get the base commit object
     let base_oid = git2::Oid::from_str(&base_commit)
         .map_err(|e| format!("Invalid base commit hash: {}", e))?;
-    
+
     // Get the base commit object (validate it exists)
-    let _base_commit_obj = repo.find_commit(base_oid)
+    let _base_commit_obj = repo
+        .find_commit(base_oid)
         .map_err(|e| format!("Failed to find base commit: {}", e))?;
 
     // Get HEAD commit
-    let head = repo.head()
+    let head = repo
+        .head()
         .map_err(|e| format!("Failed to get HEAD: {}", e))?;
-    let head_commit = head.peel_to_commit()
+    let head_commit = head
+        .peel_to_commit()
         .map_err(|e| format!("Failed to get HEAD commit: {}", e))?;
 
     // Check that base is an ancestor of HEAD
-    let is_ancestor = repo.graph_descendant_of(head_commit.id(), base_oid)
+    let is_ancestor = repo
+        .graph_descendant_of(head_commit.id(), base_oid)
         .map_err(|e| format!("Failed to check ancestry: {}", e))?;
-    
+
     if !is_ancestor {
         return Err(format!(
             "Base commit {} is not an ancestor of HEAD. Cannot rebase.",
@@ -1750,35 +1847,38 @@ fn get_rebase_commits(
     }
 
     // Walk commits from HEAD back to (but not including) base
-    let mut revwalk = repo.revwalk()
+    let mut revwalk = repo
+        .revwalk()
         .map_err(|e| format!("Failed to create revwalk: {}", e))?;
-    
+
     // Push HEAD
-    revwalk.push_head()
+    revwalk
+        .push_head()
         .map_err(|e| format!("Failed to push HEAD to revwalk: {}", e))?;
-    
+
     // Hide base commit (we don't want to include it)
-    revwalk.hide(base_oid)
+    revwalk
+        .hide(base_oid)
         .map_err(|e| format!("Failed to hide base commit: {}", e))?;
 
     // Collect commits
     let mut commits = Vec::new();
     for oid in revwalk {
         let oid = oid.map_err(|e| format!("Failed to get commit OID: {}", e))?;
-        let commit = repo.find_commit(oid)
+        let commit = repo
+            .find_commit(oid)
             .map_err(|e| format!("Failed to find commit: {}", e))?;
 
         let hash = commit.id().to_string();
         let short_hash = hash.chars().take(7).collect();
-        let message = commit.message()
+        let message = commit
+            .message()
             .unwrap_or("<no message>")
             .lines()
             .next()
             .unwrap_or("<no message>")
             .to_string();
-        let author = commit.author().name()
-            .unwrap_or("<unknown>")
-            .to_string();
+        let author = commit.author().name().unwrap_or("<unknown>").to_string();
         let timestamp = commit.time().seconds();
 
         commits.push(RebaseCommit {
@@ -1787,7 +1887,7 @@ fn get_rebase_commits(
             message,
             author,
             timestamp,
-            action: "pick".to_string(),  // Default action is "pick"
+            action: "pick".to_string(), // Default action is "pick"
         });
     }
 
@@ -1804,35 +1904,37 @@ fn get_rebase_commits(
 
 /// Discard changes to a specific file in the working directory
 #[tauri::command]
-fn discard_file_changes(
-    path: String,
-    file_path: String,
-) -> Result<String, String> {
+fn discard_file_changes(path: String, file_path: String) -> Result<String, String> {
     // Open the repository
-    let repo = Repository::open(&path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let repo = Repository::open(&path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
     // Get the file path as a Path object
     let file_path_obj = std::path::Path::new(&file_path);
 
     // Try to get the file from HEAD
-    let head = repo.head()
+    let head = repo
+        .head()
         .map_err(|e| format!("Failed to get HEAD: {}", e))?;
-    let head_commit = head.peel_to_commit()
+    let head_commit = head
+        .peel_to_commit()
         .map_err(|e| format!("Failed to get HEAD commit: {}", e))?;
-    let head_tree = head_commit.tree()
+    let head_tree = head_commit
+        .tree()
         .map_err(|e| format!("Failed to get HEAD tree: {}", e))?;
 
     // Check if file exists in HEAD
     if let Ok(entry) = head_tree.get_path(file_path_obj) {
         // File exists in HEAD - restore it
-        let obj = entry.to_object(&repo)
+        let obj = entry
+            .to_object(&repo)
             .map_err(|e| format!("Failed to get object: {}", e))?;
-        let blob = obj.as_blob()
+        let blob = obj
+            .as_blob()
             .ok_or_else(|| format!("Object is not a blob: {}", file_path))?;
 
         // Write the blob content to the working directory
-        let repo_workdir = repo.workdir()
+        let repo_workdir = repo
+            .workdir()
             .ok_or_else(|| "Repository has no working directory".to_string())?;
         let full_path = repo_workdir.join(file_path_obj);
 
@@ -1842,7 +1944,8 @@ fn discard_file_changes(
         Ok(format!("Discarded changes to {}", file_path))
     } else {
         // File doesn't exist in HEAD (new file) - delete it
-        let repo_workdir = repo.workdir()
+        let repo_workdir = repo
+            .workdir()
             .ok_or_else(|| "Repository has no working directory".to_string())?;
         let full_path = repo_workdir.join(file_path_obj);
 
@@ -1911,20 +2014,23 @@ fn start_interactive_rebase(
     use git2::RebaseOptions;
 
     // Open the repository
-    let repo = Repository::open(&path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let repo = Repository::open(&path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
     // Check that working directory is clean
-    let statuses = repo.statuses(None)
+    let statuses = repo
+        .statuses(None)
         .map_err(|e| format!("Failed to get repository status: {}", e))?;
-    
+
     let has_changes = statuses.iter().any(|s| {
         let status = s.status();
         status.is_wt_modified() || status.is_wt_new() || status.is_wt_deleted()
     });
-    
+
     if has_changes {
-        return Err("Working directory has uncommitted changes. Commit or stash them before rebasing.".to_string());
+        return Err(
+            "Working directory has uncommitted changes. Commit or stash them before rebasing."
+                .to_string(),
+        );
     }
 
     // Validate instructions
@@ -1934,13 +2040,18 @@ fn start_interactive_rebase(
 
     // First instruction must be "pick" (can't squash into nothing)
     if instructions[0].action != "pick" {
-        return Err("First commit must be 'pick'. Cannot squash or fixup the first commit.".to_string());
+        return Err(
+            "First commit must be 'pick'. Cannot squash or fixup the first commit.".to_string(),
+        );
     }
 
     // Check that we don't have squash/fixup without a pick before it
     for i in 1..instructions.len() {
-        if (instructions[i].action == "squash" || instructions[i].action == "fixup") &&
-           (instructions[i-1].action == "drop" || instructions[i-1].action == "squash" || instructions[i-1].action == "fixup") {
+        if (instructions[i].action == "squash" || instructions[i].action == "fixup")
+            && (instructions[i - 1].action == "drop"
+                || instructions[i - 1].action == "squash"
+                || instructions[i - 1].action == "fixup")
+        {
             return Err(format!(
                 "Commit {} cannot be squashed/fixuped because the previous commit is not 'pick'",
                 instructions[i].hash
@@ -1951,29 +2062,34 @@ fn start_interactive_rebase(
     // Get the base commit OID
     let base_oid = git2::Oid::from_str(&base_commit)
         .map_err(|e| format!("Invalid base commit hash: {}", e))?;
-    
+
     // Validate that the base commit exists
-    let _base_commit_obj = repo.find_commit(base_oid)
+    let _base_commit_obj = repo
+        .find_commit(base_oid)
         .map_err(|e| format!("Failed to find base commit: {}", e))?;
 
     // Create an annotated commit for the base
-    let base_annotated = repo.find_annotated_commit(base_oid)
+    let base_annotated = repo
+        .find_annotated_commit(base_oid)
         .map_err(|e| format!("Failed to create annotated commit: {}", e))?;
 
     // Get signature for commits
-    let signature = repo.signature()
+    let signature = repo
+        .signature()
         .map_err(|e| format!("Failed to get signature: {}", e))?;
 
     // Initialize rebase options
     let mut rebase_options = RebaseOptions::new();
-    
+
     // Start the rebase
-    let mut rebase = repo.rebase(
-        None,                    // Rebase HEAD
-        Some(&base_annotated),   // Onto base_commit
-        None,                    // No custom onto
-        Some(&mut rebase_options)
-    ).map_err(|e| format!("Failed to start rebase: {}", e))?;
+    let mut rebase = repo
+        .rebase(
+            None,                  // Rebase HEAD
+            Some(&base_annotated), // Onto base_commit
+            None,                  // No custom onto
+            Some(&mut rebase_options),
+        )
+        .map_err(|e| format!("Failed to start rebase: {}", e))?;
 
     let mut applied_count = 0;
     let mut commits_to_squash: Vec<(git2::Oid, String)> = Vec::new(); // (oid, message)
@@ -1988,14 +2104,17 @@ fn start_interactive_rebase(
                 if op.is_none() {
                     break; // No more operations
                 }
-                
-                let _op = op.unwrap()
+
+                let _op = op
+                    .unwrap()
                     .map_err(|e| format!("Failed to get rebase operation: {}", e))?;
 
                 // If we have pending squashes, apply them first
                 if !commits_to_squash.is_empty() {
                     // This shouldn't happen with proper validation, but handle it
-                    return Err("Internal error: squashed commits without a pick target".to_string());
+                    return Err(
+                        "Internal error: squashed commits without a pick target".to_string()
+                    );
                 }
 
                 // Apply the commit
@@ -2005,12 +2124,13 @@ fn start_interactive_rebase(
                     }
                     Err(_e) => {
                         // Check for conflicts
-                        let repo_index = repo.index()
+                        let repo_index = repo
+                            .index()
                             .map_err(|e2| format!("Failed to get index: {}", e2))?;
-                        
+
                         if repo_index.has_conflicts() {
                             let conflicts = collect_conflicts(&repo_index)?;
-                            
+
                             return Ok(RebaseResult {
                                 success: false,
                                 current_commit_index: index,
@@ -2021,28 +2141,31 @@ fn start_interactive_rebase(
                             });
                         } else {
                             // Abort on other errors
-                            rebase.abort()
+                            rebase
+                                .abort()
                                 .map_err(|e2| format!("Failed to abort rebase: {}", e2))?;
                             return Err(format!("Failed to apply commit: {}", _e));
                         }
                     }
                 }
             }
-            
+
             "squash" | "fixup" => {
                 // Get the commit to squash
                 let op = rebase.next();
                 if op.is_none() {
                     break;
                 }
-                
-                let operation = op.unwrap()
+
+                let operation = op
+                    .unwrap()
                     .map_err(|e| format!("Failed to get rebase operation: {}", e))?;
-                
+
                 let commit_oid = operation.id();
-                let commit = repo.find_commit(commit_oid)
+                let commit = repo
+                    .find_commit(commit_oid)
                     .map_err(|e| format!("Failed to find commit to squash: {}", e))?;
-                
+
                 let message = if instruction.action == "squash" {
                     commit.message().unwrap_or("").to_string()
                 } else {
@@ -2059,54 +2182,64 @@ fn start_interactive_rebase(
                     }
                     Err(_e) => {
                         // Check for conflicts
-                        let repo_index = repo.index()
+                        let repo_index = repo
+                            .index()
                             .map_err(|e2| format!("Failed to get index: {}", e2))?;
-                        
+
                         if repo_index.has_conflicts() {
                             let conflicts = collect_conflicts(&repo_index)?;
-                            rebase.abort()
+                            rebase
+                                .abort()
                                 .map_err(|e2| format!("Failed to abort rebase: {}", e2))?;
-                            
+
                             return Ok(RebaseResult {
                                 success: false,
                                 current_commit_index: index,
                                 total_commits: total_operations,
                                 conflicts,
-                                message: format!("Conflicts during squash at commit {}/{}. Rebase aborted.", index + 1, total_operations),
+                                message: format!(
+                                    "Conflicts during squash at commit {}/{}. Rebase aborted.",
+                                    index + 1,
+                                    total_operations
+                                ),
                                 rebase_state: "conflict".to_string(),
                             });
                         } else {
-                            rebase.abort()
+                            rebase
+                                .abort()
                                 .map_err(|e2| format!("Failed to abort rebase: {}", e2))?;
                             return Err(format!("Failed to squash commit: {}", _e));
                         }
                     }
                 }
             }
-            
+
             "drop" => {
                 // Skip this commit entirely
                 let op = rebase.next();
                 if op.is_none() {
                     break;
                 }
-                
+
                 // Just move to next operation without committing
                 // The commit will be dropped
             }
-            
+
             "reword" => {
                 // Apply commit with new message
                 let op = rebase.next();
                 if op.is_none() {
                     break;
                 }
-                
-                let _op = op.unwrap()
+
+                let _op = op
+                    .unwrap()
                     .map_err(|e| format!("Failed to get rebase operation: {}", e))?;
 
                 // Get new message from instruction
-                let new_message = instruction.new_message.clone()
+                let new_message = instruction
+                    .new_message
+                    .clone()
                     .unwrap_or_else(|| "Reworded commit".to_string());
 
                 // Apply with new message
@@ -2115,14 +2248,16 @@ fn start_interactive_rebase(
                         applied_count += 1;
                     }
                     Err(_e) => {
-                        let repo_index = repo.index()
+                        let repo_index = repo
+                            .index()
                             .map_err(|e2| format!("Failed to get index: {}", e2))?;
-                        
+
                         if repo_index.has_conflicts() {
                             let conflicts = collect_conflicts(&repo_index)?;
-                            rebase.abort()
+                            rebase
+                                .abort()
                                 .map_err(|e2| format!("Failed to abort rebase: {}", e2))?;
-                            
+
                             return Ok(RebaseResult {
                                 success: false,
                                 current_commit_index: index,
@@ -2132,16 +2267,18 @@ fn start_interactive_rebase(
                                 rebase_state: "conflict".to_string(),
                             });
                         } else {
-                            rebase.abort()
+                            rebase
+                                .abort()
                                 .map_err(|e2| format!("Failed to abort rebase: {}", e2))?;
                             return Err(format!("Failed to reword commit: {}", _e));
                         }
                     }
                 }
             }
-            
+
             _ => {
-                rebase.abort()
+                rebase
+                    .abort()
                     .map_err(|e| format!("Failed to abort rebase: {}", e))?;
                 return Err(format!("Unknown action: {}", instruction.action));
             }
@@ -2149,7 +2286,8 @@ fn start_interactive_rebase(
     }
 
     // Finish the rebase
-    rebase.finish(None)
+    rebase
+        .finish(None)
         .map_err(|e| format!("Failed to finish rebase: {}", e))?;
 
     Ok(RebaseResult {
@@ -2157,7 +2295,10 @@ fn start_interactive_rebase(
         current_commit_index: total_operations,
         total_commits: total_operations,
         conflicts: vec![],
-        message: format!("Interactive rebase completed successfully! {} commits applied.", applied_count),
+        message: format!(
+            "Interactive rebase completed successfully! {} commits applied.",
+            applied_count
+        ),
         rebase_state: "completed".to_string(),
     })
 }
@@ -2166,14 +2307,14 @@ fn start_interactive_rebase(
 #[tauri::command]
 fn abort_rebase(path: String) -> Result<String, String> {
     // Open the repository
-    let repo = Repository::open(&path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let repo = Repository::open(&path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
     // Check if a rebase is in progress
     let state = repo.state();
-    if state != git2::RepositoryState::Rebase && 
-       state != git2::RepositoryState::RebaseInteractive &&
-       state != git2::RepositoryState::RebaseMerge {
+    if state != git2::RepositoryState::Rebase
+        && state != git2::RepositoryState::RebaseInteractive
+        && state != git2::RepositoryState::RebaseMerge
+    {
         return Err("No rebase in progress".to_string());
     }
 
@@ -2184,10 +2325,10 @@ fn abort_rebase(path: String) -> Result<String, String> {
                 // Abort the rebase
                 match rebase.abort() {
                     Ok(_) => Ok(()),
-                    Err(e) => Err(format!("Failed to abort rebase: {}", e))
+                    Err(e) => Err(format!("Failed to abort rebase: {}", e)),
                 }
             }
-            Err(e) => Err(format!("Failed to open rebase: {}", e))
+            Err(e) => Err(format!("Failed to open rebase: {}", e)),
         }
     };
 
@@ -2198,9 +2339,13 @@ fn abort_rebase(path: String) -> Result<String, String> {
         }
         Err(e) => {
             // If we can't open the rebase, try to cleanup the state manually
-            repo.cleanup_state()
-                .map_err(|e2| format!("Failed to cleanup rebase state: {}. Original error: {}", e2, e))?;
-            
+            repo.cleanup_state().map_err(|e2| {
+                format!(
+                    "Failed to cleanup rebase state: {}. Original error: {}",
+                    e2, e
+                )
+            })?;
+
             Ok("Rebase state cleaned up successfully.".to_string())
         }
     }
@@ -2210,21 +2355,22 @@ fn abort_rebase(path: String) -> Result<String, String> {
 #[tauri::command]
 fn continue_rebase(path: String) -> Result<RebaseResult, String> {
     // Open the repository
-    let repo = Repository::open(&path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let repo = Repository::open(&path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
     // Check if a rebase is in progress
     let state = repo.state();
-    if state != git2::RepositoryState::Rebase && 
-       state != git2::RepositoryState::RebaseInteractive &&
-       state != git2::RepositoryState::RebaseMerge {
+    if state != git2::RepositoryState::Rebase
+        && state != git2::RepositoryState::RebaseInteractive
+        && state != git2::RepositoryState::RebaseMerge
+    {
         return Err("No rebase in progress to continue".to_string());
     }
 
     // Check that conflicts are resolved
-    let index = repo.index()
+    let index = repo
+        .index()
         .map_err(|e| format!("Failed to get index: {}", e))?;
-    
+
     if index.has_conflicts() {
         let conflicts = collect_conflicts(&index)?;
         return Ok(RebaseResult {
@@ -2232,17 +2378,20 @@ fn continue_rebase(path: String) -> Result<RebaseResult, String> {
             current_commit_index: 0,
             total_commits: 0,
             conflicts,
-            message: "Cannot continue: conflicts still exist. Please resolve all conflicts first.".to_string(),
+            message: "Cannot continue: conflicts still exist. Please resolve all conflicts first."
+                .to_string(),
             rebase_state: "conflict".to_string(),
         });
     }
 
     // Open the existing rebase
-    let mut rebase = repo.open_rebase(None)
+    let mut rebase = repo
+        .open_rebase(None)
         .map_err(|e| format!("Failed to open rebase: {}", e))?;
 
     // Get signature for commits
-    let signature = repo.signature()
+    let signature = repo
+        .signature()
         .map_err(|e| format!("Failed to get signature: {}", e))?;
 
     // Continue with remaining operations
@@ -2256,7 +2405,8 @@ fn continue_rebase(path: String) -> Result<RebaseResult, String> {
 
     // Reopen to restart iteration
     drop(rebase);
-    rebase = repo.open_rebase(None)
+    rebase = repo
+        .open_rebase(None)
         .map_err(|e| format!("Failed to reopen rebase: {}", e))?;
 
     // Continue applying commits
@@ -2269,12 +2419,13 @@ fn continue_rebase(path: String) -> Result<RebaseResult, String> {
             }
             Err(_e) => {
                 // Check for more conflicts
-                let repo_index = repo.index()
+                let repo_index = repo
+                    .index()
                     .map_err(|e2| format!("Failed to get index: {}", e2))?;
-                
+
                 if repo_index.has_conflicts() {
                     let conflicts = collect_conflicts(&repo_index)?;
-                    
+
                     return Ok(RebaseResult {
                         success: false,
                         current_commit_index: applied_count,
@@ -2285,7 +2436,8 @@ fn continue_rebase(path: String) -> Result<RebaseResult, String> {
                     });
                 } else {
                     // Abort on other errors
-                    rebase.abort()
+                    rebase
+                        .abort()
                         .map_err(|e2| format!("Failed to abort rebase: {}", e2))?;
                     return Err(format!("Failed to continue rebase: {}", _e));
                 }
@@ -2294,7 +2446,8 @@ fn continue_rebase(path: String) -> Result<RebaseResult, String> {
     }
 
     // Finish the rebase
-    rebase.finish(None)
+    rebase
+        .finish(None)
         .map_err(|e| format!("Failed to finish rebase: {}", e))?;
 
     Ok(RebaseResult {
@@ -2302,7 +2455,10 @@ fn continue_rebase(path: String) -> Result<RebaseResult, String> {
         current_commit_index: total_count,
         total_commits: total_count,
         conflicts: vec![],
-        message: format!("Rebase continued and completed successfully! {} additional commits applied.", applied_count),
+        message: format!(
+            "Rebase continued and completed successfully! {} additional commits applied.",
+            applied_count
+        ),
         rebase_state: "completed".to_string(),
     })
 }
@@ -2311,15 +2467,15 @@ fn continue_rebase(path: String) -> Result<RebaseResult, String> {
 #[tauri::command]
 fn get_rebase_status(path: String) -> Result<Option<RebaseStatus>, String> {
     // Open the repository
-    let repo = Repository::open(&path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let repo = Repository::open(&path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
     // Check repository state
     let state = repo.state();
-    
-    if state != git2::RepositoryState::Rebase && 
-       state != git2::RepositoryState::RebaseInteractive &&
-       state != git2::RepositoryState::RebaseMerge {
+
+    if state != git2::RepositoryState::Rebase
+        && state != git2::RepositoryState::RebaseInteractive
+        && state != git2::RepositoryState::RebaseMerge
+    {
         // No rebase in progress
         return Ok(None);
     }
@@ -2343,14 +2499,15 @@ fn get_rebase_status(path: String) -> Result<Option<RebaseStatus>, String> {
 
     // Count total operations
     let total_commits = rebase.len();
-    
+
     // Get current operation index
     let current_index = rebase.operation_current().unwrap_or(0);
 
     // Check for conflicts
-    let index = repo.index()
+    let index = repo
+        .index()
         .map_err(|e| format!("Failed to get index: {}", e))?;
-    
+
     let has_conflicts = index.has_conflicts();
     let conflicts = if has_conflicts {
         collect_conflicts(&index).unwrap_or_else(|_| vec![])
@@ -2413,11 +2570,12 @@ fn validate_rebase_order(
 
     // Check for squash/fixup without pick before it
     for i in 1..instructions.len() {
-        let prev_action = &instructions[i-1].action;
+        let prev_action = &instructions[i - 1].action;
         let current_action = &instructions[i].action;
-        
-        if (current_action == "squash" || current_action == "fixup") &&
-           (prev_action == "drop" || prev_action == "squash" || prev_action == "fixup") {
+
+        if (current_action == "squash" || current_action == "fixup")
+            && (prev_action == "drop" || prev_action == "squash" || prev_action == "fixup")
+        {
             errors.push(format!(
                 "Commit {} at position {} cannot be '{}' because the previous commit is '{}'. \
                  Squash and fixup require a 'pick' commit before them.",
@@ -2450,17 +2608,19 @@ fn validate_rebase_order(
     // Warn about extensive reordering (might cause conflicts)
     let original_order: Vec<String> = instructions.iter().map(|i| i.hash.clone()).collect();
     let _sorted_order = original_order.clone();
-    
+
     // Try to open repo to check original order
     if let Ok(_repo) = Repository::open(&path) {
         // If we can get the actual order, check against it
         // For now, just warn if there are many operations
-        let action_counts: std::collections::HashMap<&str, usize> = 
-            instructions.iter().fold(std::collections::HashMap::new(), |mut acc, i| {
-                *acc.entry(i.action.as_str()).or_insert(0) += 1;
-                acc
-            });
-        
+        let action_counts: std::collections::HashMap<&str, usize> =
+            instructions
+                .iter()
+                .fold(std::collections::HashMap::new(), |mut acc, i| {
+                    *acc.entry(i.action.as_str()).or_insert(0) += 1;
+                    acc
+                });
+
         if action_counts.get("drop").unwrap_or(&0) > &3 {
             warnings.push(format!(
                 "Dropping {} commits. This might cause conflicts if later commits depend on them.",
@@ -2468,7 +2628,8 @@ fn validate_rebase_order(
             ));
         }
 
-        if action_counts.get("squash").unwrap_or(&0) + action_counts.get("fixup").unwrap_or(&0) > 5 {
+        if action_counts.get("squash").unwrap_or(&0) + action_counts.get("fixup").unwrap_or(&0) > 5
+        {
             warnings.push(
                 "Squashing/fixuping many commits. Review carefully to ensure commit messages are meaningful.".to_string()
             );
@@ -2489,7 +2650,7 @@ fn validate_rebase_order(
     // Check for unknown actions
     for (i, instruction) in instructions.iter().enumerate() {
         match instruction.action.as_str() {
-            "pick" | "squash" | "fixup" | "drop" | "reword" | "edit" => {},
+            "pick" | "squash" | "fixup" | "drop" | "reword" | "edit" => {}
             _ => {
                 errors.push(format!(
                     "Unknown action '{}' at position {}. Valid actions are: pick, squash, fixup, drop, reword, edit",
@@ -2517,7 +2678,7 @@ fn prepare_interactive_rebase(
 ) -> Result<RebasePlan, String> {
     // Validate the instructions first
     let validation = validate_rebase_order(path.clone(), instructions.clone())?;
-    
+
     if !validation.is_valid {
         return Err(format!(
             "Invalid rebase instructions: {}",
@@ -2528,15 +2689,17 @@ fn prepare_interactive_rebase(
     // Count actions
     let mut actions_summary = std::collections::HashMap::new();
     for instruction in &instructions {
-        *actions_summary.entry(instruction.action.clone()).or_insert(0) += 1;
+        *actions_summary
+            .entry(instruction.action.clone())
+            .or_insert(0) += 1;
     }
 
     // Calculate resulting commit count
     let total_commits = instructions.len();
     let dropped = *actions_summary.get("drop").unwrap_or(&0);
-    let squashed = *actions_summary.get("squash").unwrap_or(&0) + 
-                   *actions_summary.get("fixup").unwrap_or(&0);
-    
+    let squashed =
+        *actions_summary.get("squash").unwrap_or(&0) + *actions_summary.get("fixup").unwrap_or(&0);
+
     let resulting_commits = total_commits - dropped - squashed;
 
     // Generate warnings
@@ -2546,10 +2709,7 @@ fn prepare_interactive_rebase(
     if dropped > 0 || squashed > 0 {
         warnings.push(format!(
             "This rebase will change {} commits into {} commits ({} dropped, {} squashed/fixuped)",
-            total_commits,
-            resulting_commits,
-            dropped,
-            squashed
+            total_commits, resulting_commits, dropped, squashed
         ));
     }
 
@@ -2574,10 +2734,10 @@ fn prepare_interactive_rebase(
 #[tauri::command]
 fn list_stashes(path: String) -> Result<Vec<StashEntry>, String> {
     use std::sync::{Arc, Mutex};
-    
+
     // Open the repository
-    let mut repo = Repository::open(&path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let mut repo =
+        Repository::open(&path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
     let stashes = Arc::new(Mutex::new(Vec::new()));
     let stashes_clone = Arc::clone(&stashes);
@@ -2588,7 +2748,7 @@ fn list_stashes(path: String) -> Result<Vec<StashEntry>, String> {
         // Parse the stash message to extract branch and commit info
         // Format: "WIP on branch: commit_hash commit_message" or "On branch: message"
         let message_str = message.to_string();
-        
+
         // Extract branch name from stash message
         let branch = if let Some(on_pos) = message_str.find("On ") {
             let after_on = &message_str[on_pos + 3..];
@@ -2603,12 +2763,10 @@ fn list_stashes(path: String) -> Result<Vec<StashEntry>, String> {
 
         // Open repo separately for each stash to avoid borrow issues
         let repo_inner = Repository::open(&path_clone).ok();
-        
+
         // Get the stash commit to extract timestamp and file count
-        let stash_commit = repo_inner
-            .as_ref()
-            .and_then(|r| r.find_commit(*oid).ok());
-        
+        let stash_commit = repo_inner.as_ref().and_then(|r| r.find_commit(*oid).ok());
+
         let timestamp = stash_commit
             .as_ref()
             .map(|c| c.time().seconds())
@@ -2627,7 +2785,8 @@ fn list_stashes(path: String) -> Result<Vec<StashEntry>, String> {
 
                 // Create diff
                 let diff = if let Some(parent_tree) = parent_tree {
-                    r.diff_tree_to_tree(Some(&parent_tree), Some(&commit_tree), None).ok()
+                    r.diff_tree_to_tree(Some(&parent_tree), Some(&commit_tree), None)
+                        .ok()
                 } else {
                     r.diff_tree_to_tree(None, Some(&commit_tree), None).ok()
                 };
@@ -2651,7 +2810,8 @@ fn list_stashes(path: String) -> Result<Vec<StashEntry>, String> {
         });
 
         true // Continue iteration
-    }).map_err(|e| format!("Failed to iterate stashes: {}", e))?;
+    })
+    .map_err(|e| format!("Failed to iterate stashes: {}", e))?;
 
     // Extract the data from the Arc<Mutex<Vec>> - clone it first to drop the lock
     let result = stashes.lock().unwrap().clone();
@@ -2660,26 +2820,28 @@ fn list_stashes(path: String) -> Result<Vec<StashEntry>, String> {
 
 /// Create a new stash with the given options
 #[tauri::command]
-fn create_stash(
-    path: String,
-    options: StashCreateOptions,
-) -> Result<StashEntry, String> {
+fn create_stash(path: String, options: StashCreateOptions) -> Result<StashEntry, String> {
     use git2::StashFlags;
-    
+
     // Open the repository
-    let mut repo = Repository::open(&path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let mut repo =
+        Repository::open(&path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
     // Check if there are any changes to stash
     // Use a separate scope to ensure the immutable borrow is dropped before we mutably borrow
     {
-        let statuses = repo.statuses(None)
+        let statuses = repo
+            .statuses(None)
             .map_err(|e| format!("Failed to get repository status: {}", e))?;
-        
+
         let has_changes = statuses.iter().any(|s| {
             let status = s.status();
-            status.is_wt_modified() || status.is_wt_new() || status.is_wt_deleted() || 
-            status.is_index_modified() || status.is_index_new() || status.is_index_deleted()
+            status.is_wt_modified()
+                || status.is_wt_new()
+                || status.is_wt_deleted()
+                || status.is_index_modified()
+                || status.is_index_new()
+                || status.is_index_deleted()
         });
 
         if !has_changes {
@@ -2688,11 +2850,13 @@ fn create_stash(
     } // statuses is dropped here, releasing the immutable borrow
 
     // Get signature
-    let signature = repo.signature()
+    let signature = repo
+        .signature()
         .map_err(|e| format!("Failed to get signature: {}", e))?;
 
     // Get current branch name for the message
-    let branch_name = repo.head()
+    let branch_name = repo
+        .head()
         .ok()
         .and_then(|h| h.shorthand().map(|s| s.to_string()))
         .unwrap_or_else(|| "HEAD".to_string());
@@ -2703,29 +2867,34 @@ fn create_stash(
         msg
     } else {
         // Auto-generate message
-        format!("WIP on {}: {}", branch_name, 
-            chrono::Local::now().format("%Y-%m-%d %H:%M:%S"))
+        format!(
+            "WIP on {}: {}",
+            branch_name,
+            chrono::Local::now().format("%Y-%m-%d %H:%M:%S")
+        )
     };
 
     // Set up stash flags
     let mut flags = StashFlags::DEFAULT;
-    
+
     if options.include_untracked {
         flags |= StashFlags::INCLUDE_UNTRACKED;
     }
-    
+
     if options.keep_index {
         flags |= StashFlags::KEEP_INDEX;
     }
 
     // Create the stash
-    let stash_oid = repo.stash_save(&signature, &message, Some(flags))
+    let stash_oid = repo
+        .stash_save(&signature, &message, Some(flags))
         .map_err(|e| format!("Failed to create stash: {}", e))?;
 
     // Count files in the stash we just created
-    let stash_commit = repo.find_commit(stash_oid)
+    let stash_commit = repo
+        .find_commit(stash_oid)
         .map_err(|e| format!("Failed to find stash commit: {}", e))?;
-    
+
     let file_count = if let Ok(commit_tree) = stash_commit.tree() {
         let parent_tree = if stash_commit.parent_count() > 0 {
             stash_commit.parent(0).ok().and_then(|p| p.tree().ok())
@@ -2734,7 +2903,8 @@ fn create_stash(
         };
 
         let diff = if let Some(parent_tree) = parent_tree {
-            repo.diff_tree_to_tree(Some(&parent_tree), Some(&commit_tree), None).ok()
+            repo.diff_tree_to_tree(Some(&parent_tree), Some(&commit_tree), None)
+                .ok()
         } else {
             repo.diff_tree_to_tree(None, Some(&commit_tree), None).ok()
         };
@@ -2756,36 +2926,36 @@ fn create_stash(
 
 /// Apply a stash without removing it from the stash list
 #[tauri::command]
-fn apply_stash(
-    path: String,
-    stash_index: usize,
-    reinstate_index: bool,
-) -> Result<String, String> {
+fn apply_stash(path: String, stash_index: usize, reinstate_index: bool) -> Result<String, String> {
     use git2::StashApplyOptions;
-    
+
     // Open the repository
-    let mut repo = Repository::open(&path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let mut repo =
+        Repository::open(&path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
     // Check if working directory is clean
     // Use a separate scope to ensure the immutable borrow is dropped before we mutably borrow
     {
-        let statuses = repo.statuses(None)
+        let statuses = repo
+            .statuses(None)
             .map_err(|e| format!("Failed to get repository status: {}", e))?;
-        
+
         let has_changes = statuses.iter().any(|s| {
             let status = s.status();
             status.is_wt_modified() || status.is_wt_new() || status.is_wt_deleted()
         });
 
         if has_changes {
-            return Err("Working directory has uncommitted changes. Commit or stash them before applying.".to_string());
+            return Err(
+                "Working directory has uncommitted changes. Commit or stash them before applying."
+                    .to_string(),
+            );
         }
     } // statuses is dropped here, releasing the immutable borrow
 
     // Set up apply options
     let mut apply_options = StashApplyOptions::new();
-    
+
     if reinstate_index {
         apply_options.reinstantiate_index();
     }
@@ -2794,7 +2964,7 @@ fn apply_stash(
     repo.stash_apply(stash_index, Some(&mut apply_options))
         .map_err(|e| {
             if e.message().contains("conflict") {
-                format!("Conflicts detected while applying stash. Please resolve manually.")
+                "Conflicts detected while applying stash. Please resolve manually.".to_string()
             } else {
                 format!("Failed to apply stash: {}", e)
             }
@@ -2805,36 +2975,36 @@ fn apply_stash(
 
 /// Apply a stash and remove it from the stash list (pop)
 #[tauri::command]
-fn pop_stash(
-    path: String,
-    stash_index: usize,
-    reinstate_index: bool,
-) -> Result<String, String> {
+fn pop_stash(path: String, stash_index: usize, reinstate_index: bool) -> Result<String, String> {
     use git2::StashApplyOptions;
-    
+
     // Open the repository
-    let mut repo = Repository::open(&path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let mut repo =
+        Repository::open(&path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
     // Check if working directory is clean
     // Use a separate scope to ensure the immutable borrow is dropped before we mutably borrow
     {
-        let statuses = repo.statuses(None)
+        let statuses = repo
+            .statuses(None)
             .map_err(|e| format!("Failed to get repository status: {}", e))?;
-        
+
         let has_changes = statuses.iter().any(|s| {
             let status = s.status();
             status.is_wt_modified() || status.is_wt_new() || status.is_wt_deleted()
         });
 
         if has_changes {
-            return Err("Working directory has uncommitted changes. Commit or stash them before popping.".to_string());
+            return Err(
+                "Working directory has uncommitted changes. Commit or stash them before popping."
+                    .to_string(),
+            );
         }
     } // statuses is dropped here, releasing the immutable borrow
 
     // Set up apply options
     let mut apply_options = StashApplyOptions::new();
-    
+
     if reinstate_index {
         apply_options.reinstantiate_index();
     }
@@ -2843,7 +3013,7 @@ fn pop_stash(
     repo.stash_pop(stash_index, Some(&mut apply_options))
         .map_err(|e| {
             if e.message().contains("conflict") {
-                format!("Conflicts detected while popping stash. Stash was not removed.")
+                "Conflicts detected while popping stash. Stash was not removed.".to_string()
             } else {
                 format!("Failed to pop stash: {}", e)
             }
@@ -2854,13 +3024,10 @@ fn pop_stash(
 
 /// Drop (delete) a stash from the list
 #[tauri::command]
-fn drop_stash(
-    path: String,
-    stash_index: usize,
-) -> Result<String, String> {
+fn drop_stash(path: String, stash_index: usize) -> Result<String, String> {
     // Open the repository
-    let mut repo = Repository::open(&path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let mut repo =
+        Repository::open(&path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
     // Drop the stash
     repo.stash_drop(stash_index)
@@ -2871,31 +3038,28 @@ fn drop_stash(
 
 /// Get the diff for a specific stash (for preview)
 #[tauri::command]
-fn get_stash_diff(
-    path: String,
-    stash_index: usize,
-) -> Result<Vec<FileChange>, String> {
+fn get_stash_diff(path: String, stash_index: usize) -> Result<Vec<FileChange>, String> {
     // Open the repository
-    let repo = Repository::open(&path)
-        .map_err(|e| format!("Failed to open repository: {}", e))?;
+    let repo = Repository::open(&path).map_err(|e| format!("Failed to open repository: {}", e))?;
 
     // Find the stash commit
     let stash_name = format!("stash@{{{}}}", stash_index);
-    let stash_ref = repo.revparse_single(&stash_name)
+    let stash_ref = repo
+        .revparse_single(&stash_name)
         .map_err(|e| format!("Failed to find stash: {}", e))?;
-    
-    let stash_commit = stash_ref.peel_to_commit()
+
+    let stash_commit = stash_ref
+        .peel_to_commit()
         .map_err(|e| format!("Failed to get stash commit: {}", e))?;
 
     // Get the tree for this stash
-    let stash_tree = stash_commit.tree()
+    let stash_tree = stash_commit
+        .tree()
         .map_err(|e| format!("Failed to get stash tree: {}", e))?;
 
     // Get the parent tree (base state before stash)
     let parent_tree = if stash_commit.parent_count() > 0 {
-        stash_commit.parent(0)
-            .ok()
-            .and_then(|p| p.tree().ok())
+        stash_commit.parent(0).ok().and_then(|p| p.tree().ok())
     } else {
         None
     };
@@ -2914,9 +3078,15 @@ fn get_stash_diff(
 
     diff.foreach(
         &mut |delta, _| {
-            let path = delta.new_file()
+            let path = delta
+                .new_file()
                 .path()
-                .unwrap_or_else(|| delta.old_file().path().unwrap_or(std::path::Path::new("unknown")))
+                .unwrap_or_else(|| {
+                    delta
+                        .old_file()
+                        .path()
+                        .unwrap_or(std::path::Path::new("unknown"))
+                })
                 .to_string_lossy()
                 .to_string();
 
@@ -2941,7 +3111,577 @@ fn get_stash_diff(
         None,
         None,
         None,
-    ).map_err(|e| format!("Failed to iterate diff: {}", e))?;
+    )
+    .map_err(|e| format!("Failed to iterate diff: {}", e))?;
 
     Ok(file_changes)
+}
+
+// ============================================================================
+// Testing: Core Git Operations Unit Tests
+// ============================================================================
+// These tests cover the core Git operations that are critical for the
+// application's functionality. They use temporary repositories to ensure
+// isolation and prevent modification of real repositories.
+//
+// Test Coverage:
+// - get_commits: Commit retrieval with pagination (offset/limit)
+// - stage_files: Staging single and multiple files
+// - unstage_files: Unstaging operations
+// - create_commit: Commit creation with validation
+// - get_working_directory_status: Status detection for various states
+//
+// Extension Points:
+// - Add tests for branch/remote operations (Phase 5/6)
+// - Add tests for interactive rebase (Phase 7)
+// - Add tests for stash management (Phase 8)
+// - Add performance tests for large repositories
+// - Add concurrent operation tests
+// ============================================================================
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use std::io::Write;
+    use std::path::PathBuf;
+    use tempfile::TempDir;
+
+    /// Helper function to create a temporary Git repository
+    fn setup_test_repo() -> (TempDir, String) {
+        let temp_dir = TempDir::new().expect("Failed to create temp directory");
+        let repo_path = temp_dir.path().to_str().unwrap().to_string();
+
+        // Initialize a new Git repository
+        let repo = Repository::init(&repo_path).expect("Failed to init repo");
+
+        // Configure user for commits
+        let mut config = repo.config().expect("Failed to get config");
+        config
+            .set_str("user.name", "Test User")
+            .expect("Failed to set user.name");
+        config
+            .set_str("user.email", "test@example.com")
+            .expect("Failed to set user.email");
+
+        (temp_dir, repo_path)
+    }
+
+    /// Helper function to create a file in the repository
+    fn create_file(repo_path: &str, file_path: &str, content: &str) {
+        let full_path = PathBuf::from(repo_path).join(file_path);
+        if let Some(parent) = full_path.parent() {
+            fs::create_dir_all(parent).expect("Failed to create directory");
+        }
+        let mut file = fs::File::create(&full_path).expect("Failed to create file");
+        file.write_all(content.as_bytes())
+            .expect("Failed to write file");
+    }
+
+    /// Helper function to create an initial commit
+    fn create_initial_commit(repo_path: &str) -> String {
+        let repo = Repository::open(repo_path).expect("Failed to open repo");
+
+        // Create a test file
+        create_file(repo_path, "test.txt", "Initial content");
+
+        // Stage and commit
+        let mut index = repo.index().expect("Failed to get index");
+        index
+            .add_path(Path::new("test.txt"))
+            .expect("Failed to add file");
+        index.write().expect("Failed to write index");
+
+        let tree_id = index.write_tree().expect("Failed to write tree");
+        let tree = repo.find_tree(tree_id).expect("Failed to find tree");
+        let signature = repo.signature().expect("Failed to get signature");
+
+        let commit_id = repo
+            .commit(
+                Some("HEAD"),
+                &signature,
+                &signature,
+                "Initial commit",
+                &tree,
+                &[],
+            )
+            .expect("Failed to create commit");
+
+        commit_id.to_string()
+    }
+
+    #[test]
+    fn test_get_commits_basic() {
+        let (_temp_dir, repo_path) = setup_test_repo();
+        create_initial_commit(&repo_path);
+
+        // Test getting commits with default parameters
+        let commits = get_commits(repo_path.clone(), None, None).expect("Failed to get commits");
+        assert_eq!(commits.len(), 1);
+        assert_eq!(commits[0].message, "Initial commit");
+    }
+
+    /// Tests commit retrieval with limit parameter (pagination).
+    ///
+    /// This test verifies that the limit parameter correctly restricts the number
+    /// of commits returned. It's essential for UI pagination where we need to
+    /// load commits in chunks (e.g., 50 at a time).
+    ///
+    /// Extensions:
+    /// - Test with very large limits (1000+ commits)
+    /// - Test limit of 0 (should return empty or error)
+    /// - Test limit larger than total commits (should return all)
+    /// - Performance test with 10,000+ commits
+    #[test]
+    fn test_get_commits_with_limit() {
+        let (_temp_dir, repo_path) = setup_test_repo();
+        create_initial_commit(&repo_path);
+        let repo = Repository::open(&repo_path).expect("Failed to open repo");
+
+        // Create multiple commits
+        for i in 0..5 {
+            create_file(
+                &repo_path,
+                &format!("file{}.txt", i),
+                &format!("Content {}", i),
+            );
+
+            let mut index = repo.index().expect("Failed to get index");
+            index
+                .add_path(Path::new(&format!("file{}.txt", i)))
+                .expect("Failed to add file");
+            index.write().expect("Failed to write index");
+
+            let tree_id = index.write_tree().expect("Failed to write tree");
+            let tree = repo.find_tree(tree_id).expect("Failed to find tree");
+            let signature = repo.signature().expect("Failed to get signature");
+            let head = repo.head().expect("Failed to get HEAD");
+            let parent = head.peel_to_commit().expect("Failed to get parent");
+
+            repo.commit(
+                Some("HEAD"),
+                &signature,
+                &signature,
+                &format!("Commit {}", i),
+                &tree,
+                &[&parent],
+            )
+            .expect("Failed to create commit");
+        }
+
+        // Test with limit
+        let commits = get_commits(repo_path.clone(), None, Some(3)).expect("Failed to get commits");
+        assert_eq!(commits.len(), 3);
+
+        // Test with larger limit
+        let commits =
+            get_commits(repo_path.clone(), None, Some(10)).expect("Failed to get commits");
+        assert_eq!(commits.len(), 6); // 5 new commits + 1 initial commit
+    }
+
+    /// Tests commit retrieval with offset parameter (pagination).
+    ///
+    /// This test verifies that offset correctly skips commits, enabling
+    /// "load more" functionality in the UI. Combined with limit, this allows
+    /// efficient pagination of large commit histories.
+    ///
+    /// Use Cases:
+    /// - User scrolls down in commit list → load next page
+    /// - Initial load shows first 50, then loads 50-100 on scroll
+    ///
+    /// Extensions:
+    /// - Test offset at boundary conditions (0, total_commits, total_commits+1)
+    /// - Test offset + limit combinations that exceed total commits
+    /// - Test negative offset handling (should be caught by type system)
+    #[test]
+    fn test_get_commits_with_offset() {
+        let (_temp_dir, repo_path) = setup_test_repo();
+        create_initial_commit(&repo_path);
+        let repo = Repository::open(&repo_path).expect("Failed to open repo");
+
+        // Create multiple commits
+        for i in 0..5 {
+            create_file(
+                &repo_path,
+                &format!("file{}.txt", i),
+                &format!("Content {}", i),
+            );
+
+            let mut index = repo.index().expect("Failed to get index");
+            index
+                .add_path(Path::new(&format!("file{}.txt", i)))
+                .expect("Failed to add file");
+            index.write().expect("Failed to write index");
+
+            let tree_id = index.write_tree().expect("Failed to write tree");
+            let tree = repo.find_tree(tree_id).expect("Failed to find tree");
+            let signature = repo.signature().expect("Failed to get signature");
+            let head = repo.head().expect("Failed to get HEAD");
+            let parent = head.peel_to_commit().expect("Failed to get parent");
+
+            repo.commit(
+                Some("HEAD"),
+                &signature,
+                &signature,
+                &format!("Commit {}", i),
+                &tree,
+                &[&parent],
+            )
+            .expect("Failed to create commit");
+        }
+
+        // Test with offset
+        let commits =
+            get_commits(repo_path.clone(), Some(2), Some(2)).expect("Failed to get commits");
+        assert_eq!(commits.len(), 2);
+
+        // Test with offset beyond available commits
+        let commits =
+            get_commits(repo_path.clone(), Some(10), Some(5)).expect("Failed to get commits");
+        assert_eq!(commits.len(), 0);
+    }
+
+    #[test]
+    fn test_get_commits_empty_repo() {
+        let (_temp_dir, repo_path) = setup_test_repo();
+
+        // Test getting commits from empty repo (should fail)
+        let result = get_commits(repo_path.clone(), None, None);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_stage_files_single() {
+        let (_temp_dir, repo_path) = setup_test_repo();
+        create_initial_commit(&repo_path);
+
+        // Create a new file
+        create_file(&repo_path, "new_file.txt", "New content");
+
+        // Stage the file
+        let result = stage_files(repo_path.clone(), vec!["new_file.txt".to_string()]);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Files staged successfully");
+
+        // Verify file is staged
+        let status = get_working_directory_status(repo_path).expect("Failed to get status");
+        assert_eq!(status.staged.len(), 1);
+        assert_eq!(status.staged[0].path, "new_file.txt");
+        assert_eq!(status.staged[0].status, "added");
+    }
+
+    /// Tests staging multiple files in a single operation.
+    ///
+    /// This test verifies batch staging functionality, which is important
+    /// for UI operations like "Stage All" or multi-select staging.
+    ///
+    /// Extensions:
+    /// - Test staging 100+ files (performance)
+    /// - Test staging files in nested directories
+    /// - Test staging already-staged files (should be idempotent)
+    /// - Test staging mix of new, modified, and deleted files
+    #[test]
+    fn test_stage_files_multiple() {
+        let (_temp_dir, repo_path) = setup_test_repo();
+        create_initial_commit(&repo_path);
+
+        // Create multiple files
+        create_file(&repo_path, "file1.txt", "Content 1");
+        create_file(&repo_path, "file2.txt", "Content 2");
+        create_file(&repo_path, "file3.txt", "Content 3");
+
+        // Stage all files
+        let result = stage_files(
+            repo_path.clone(),
+            vec![
+                "file1.txt".to_string(),
+                "file2.txt".to_string(),
+                "file3.txt".to_string(),
+            ],
+        );
+        assert!(result.is_ok());
+
+        // Verify all files are staged
+        let status = get_working_directory_status(repo_path).expect("Failed to get status");
+        assert_eq!(status.staged.len(), 3);
+    }
+
+    #[test]
+    fn test_stage_files_nonexistent() {
+        let (_temp_dir, repo_path) = setup_test_repo();
+        create_initial_commit(&repo_path);
+
+        // Try to stage a non-existent file
+        let result = stage_files(repo_path, vec!["nonexistent.txt".to_string()]);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_unstage_files() {
+        let (_temp_dir, repo_path) = setup_test_repo();
+        create_initial_commit(&repo_path);
+
+        // Create and stage a file
+        create_file(&repo_path, "to_unstage.txt", "Content");
+        stage_files(repo_path.clone(), vec!["to_unstage.txt".to_string()])
+            .expect("Failed to stage file");
+
+        // Verify it's staged
+        let status = get_working_directory_status(repo_path.clone()).expect("Failed to get status");
+        assert_eq!(status.staged.len(), 1);
+
+        // Unstage the file
+        let result = unstage_files(repo_path.clone(), vec!["to_unstage.txt".to_string()]);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "Files unstaged successfully");
+
+        // Verify it's unstaged
+        let status = get_working_directory_status(repo_path).expect("Failed to get status");
+        assert_eq!(status.staged.len(), 0);
+        assert_eq!(status.unstaged.len(), 1);
+    }
+
+    #[test]
+    fn test_unstage_files_multiple() {
+        let (_temp_dir, repo_path) = setup_test_repo();
+        create_initial_commit(&repo_path);
+
+        // Create and stage multiple files
+        create_file(&repo_path, "file1.txt", "Content 1");
+        create_file(&repo_path, "file2.txt", "Content 2");
+        stage_files(
+            repo_path.clone(),
+            vec!["file1.txt".to_string(), "file2.txt".to_string()],
+        )
+        .expect("Failed to stage files");
+
+        // Unstage all files
+        let result = unstage_files(
+            repo_path.clone(),
+            vec!["file1.txt".to_string(), "file2.txt".to_string()],
+        );
+        assert!(result.is_ok());
+
+        // Verify all are unstaged
+        let status = get_working_directory_status(repo_path).expect("Failed to get status");
+        assert_eq!(status.staged.len(), 0);
+        assert_eq!(status.unstaged.len(), 2);
+    }
+
+    #[test]
+    fn test_create_commit_basic() {
+        let (_temp_dir, repo_path) = setup_test_repo();
+        create_initial_commit(&repo_path);
+
+        // Create and stage a file
+        create_file(&repo_path, "commit_test.txt", "Content");
+        stage_files(repo_path.clone(), vec!["commit_test.txt".to_string()])
+            .expect("Failed to stage file");
+
+        // Create a commit
+        let result = create_commit(repo_path.clone(), "Test commit message".to_string());
+        assert!(result.is_ok());
+
+        let commit_result = result.unwrap();
+        assert!(commit_result.success);
+        assert!(!commit_result.commit_hash.is_empty());
+
+        // Verify commit exists
+        let commits = get_commits(repo_path, None, Some(10)).expect("Failed to get commits");
+        assert_eq!(commits.len(), 2);
+        assert_eq!(commits[0].message, "Test commit message");
+    }
+
+    #[test]
+    fn test_create_commit_empty_message() {
+        let (_temp_dir, repo_path) = setup_test_repo();
+        create_initial_commit(&repo_path);
+
+        // Create and stage a file
+        create_file(&repo_path, "test.txt", "Content");
+        stage_files(repo_path.clone(), vec!["test.txt".to_string()]).expect("Failed to stage file");
+
+        // Try to create commit with empty message
+        let result = create_commit(repo_path, "".to_string());
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("cannot be empty"));
+    }
+
+    #[test]
+    fn test_create_commit_whitespace_only_message() {
+        let (_temp_dir, repo_path) = setup_test_repo();
+        create_initial_commit(&repo_path);
+
+        // Create and stage a file
+        create_file(&repo_path, "test.txt", "Content");
+        stage_files(repo_path.clone(), vec!["test.txt".to_string()]).expect("Failed to stage file");
+
+        // Try to create commit with whitespace-only message
+        let result = create_commit(repo_path, "   ".to_string());
+        assert!(result.is_err());
+    }
+
+    /// Tests commit creation with various message formats.
+    ///
+    /// This test ensures that create_commit handles different message types
+    /// correctly, including multiline messages, special characters, and Unicode.
+    /// This is critical for international users and complex commit messages.
+    ///
+    /// Message Types Tested:
+    /// - Simple single-line messages
+    /// - Multiline messages (common in conventional commits)
+    /// - Special characters (for edge cases)
+    /// - Unicode (internationalization support)
+    ///
+    /// Extensions:
+    /// - Test very long messages (10,000+ characters)
+    /// - Test messages with only newlines
+    /// - Test messages with Git trailer format (e.g., "Fixes #123")
+    /// - Test messages with various line endings (CRLF, LF, CR)
+    #[test]
+    fn test_create_commit_different_messages() {
+        let (_temp_dir, repo_path) = setup_test_repo();
+        create_initial_commit(&repo_path);
+
+        let messages = [
+            "Simple message",
+            "Message with\nmultiple\nlines",
+            "Message with special chars: !@#$%^&*()",
+            "Unicode message: 你好世界 🌍",
+        ];
+
+        for (i, message) in messages.iter().enumerate() {
+            create_file(&repo_path, &format!("file{}.txt", i), "Content");
+            stage_files(repo_path.clone(), vec![format!("file{}.txt", i)])
+                .expect("Failed to stage file");
+
+            let result = create_commit(repo_path.clone(), message.to_string());
+            assert!(
+                result.is_ok(),
+                "Failed to create commit with message: {}",
+                message
+            );
+        }
+
+        // Verify all commits exist
+        let commits = get_commits(repo_path, None, Some(10)).expect("Failed to get commits");
+        assert_eq!(commits.len(), messages.len() + 1); // +1 for initial commit
+    }
+
+    /// Tests working directory status for a clean repository.
+    ///
+    /// A clean repo has no uncommitted changes. This is the baseline state
+    /// and should return empty staged/unstaged vectors. This test ensures
+    /// the status function correctly identifies the clean state.
+    ///
+    /// Use Case:
+    /// - UI shows "Working directory clean" message
+    /// - Disable commit button when nothing is staged
+    ///
+    /// Extensions:
+    /// - Test after various operations (commit, reset, checkout)
+    /// - Test with untracked files (should they appear in unstaged?)
+    #[test]
+    fn test_get_working_directory_status_clean() {
+        let (_temp_dir, repo_path) = setup_test_repo();
+        create_initial_commit(&repo_path);
+
+        // Get status of clean repo
+        let status = get_working_directory_status(repo_path).expect("Failed to get status");
+        assert_eq!(status.staged.len(), 0);
+        assert_eq!(status.unstaged.len(), 0);
+    }
+
+    #[test]
+    fn test_get_working_directory_status_modified() {
+        let (_temp_dir, repo_path) = setup_test_repo();
+        create_initial_commit(&repo_path);
+
+        // Modify existing file
+        create_file(&repo_path, "test.txt", "Modified content");
+
+        let status = get_working_directory_status(repo_path).expect("Failed to get status");
+        assert_eq!(status.staged.len(), 0);
+        assert_eq!(status.unstaged.len(), 1);
+        assert_eq!(status.unstaged[0].path, "test.txt");
+        assert_eq!(status.unstaged[0].status, "modified");
+    }
+
+    #[test]
+    fn test_get_working_directory_status_staged() {
+        let (_temp_dir, repo_path) = setup_test_repo();
+        create_initial_commit(&repo_path);
+
+        // Create and stage a file
+        create_file(&repo_path, "new_file.txt", "Content");
+        stage_files(repo_path.clone(), vec!["new_file.txt".to_string()])
+            .expect("Failed to stage file");
+
+        let status = get_working_directory_status(repo_path).expect("Failed to get status");
+        assert_eq!(status.staged.len(), 1);
+        assert_eq!(status.staged[0].path, "new_file.txt");
+        assert_eq!(status.staged[0].status, "added");
+        assert_eq!(status.unstaged.len(), 0);
+    }
+
+    /// Tests working directory status with mixed staged/unstaged files.
+    ///
+    /// This is a realistic scenario where users have partially staged changes.
+    /// The test verifies that the status correctly distinguishes between
+    /// staged and unstaged files, which is essential for the staging UI.
+    ///
+    /// Real-world Use Case:
+    /// - Developer modifies 4 files
+    /// - Stages 2 files for commit
+    /// - UI must show: 2 staged, 2 unstaged
+    ///
+    /// Extensions:
+    /// - Test with files in subdirectories
+    /// - Test with renamed files (staged rename, unstaged modification)
+    /// - Test with deleted files (some staged, some unstaged)
+    /// - Test with conflicted files during merge/rebase
+    #[test]
+    fn test_get_working_directory_status_mixed() {
+        let (_temp_dir, repo_path) = setup_test_repo();
+        create_initial_commit(&repo_path);
+
+        // Create multiple files
+        create_file(&repo_path, "staged1.txt", "Content 1");
+        create_file(&repo_path, "staged2.txt", "Content 2");
+        create_file(&repo_path, "unstaged1.txt", "Content 3");
+        create_file(&repo_path, "unstaged2.txt", "Content 4");
+
+        // Stage some files
+        stage_files(
+            repo_path.clone(),
+            vec!["staged1.txt".to_string(), "staged2.txt".to_string()],
+        )
+        .expect("Failed to stage files");
+
+        let status = get_working_directory_status(repo_path).expect("Failed to get status");
+        assert_eq!(status.staged.len(), 2);
+        assert_eq!(status.unstaged.len(), 2);
+    }
+
+    #[test]
+    fn test_get_working_directory_status_deleted() {
+        let (_temp_dir, repo_path) = setup_test_repo();
+        create_initial_commit(&repo_path);
+
+        // Delete the file
+        let file_path = PathBuf::from(&repo_path).join("test.txt");
+        fs::remove_file(&file_path).expect("Failed to delete file");
+
+        let status = get_working_directory_status(repo_path).expect("Failed to get status");
+        assert_eq!(status.unstaged.len(), 1);
+        assert_eq!(status.unstaged[0].path, "test.txt");
+        assert_eq!(status.unstaged[0].status, "deleted");
+    }
+
+    #[test]
+    fn test_get_working_directory_status_invalid_path() {
+        // Test with invalid repository path
+        let result = get_working_directory_status("/nonexistent/path".to_string());
+        assert!(result.is_err());
+    }
 }
